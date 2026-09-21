@@ -1,5 +1,5 @@
 import { big, fmtMoney, type Big, ZERO } from './bignum'
-import { BALANCE } from './balance'
+import { BALANCE, DUFFEL_ODDS, shardsForLevel } from './balance'
 import { loadContent, DEFAULT_THEME } from './content'
 import {
   computeModifiers, stationCost, stationCostBulk, affordableLevels,
@@ -11,8 +11,10 @@ import { runFor, cappedOfflineSeconds } from './tick'
 import { loadFromStorage, saveToStorage, clearStorage, exportSave, importSave } from './save'
 import type {
   ContentPack, GameState, Modifiers, StepReport, ItemSlot,
-  GameEvent, EventDraft,
+  GameEvent, EventDraft, DuffelTier, OpenResult, Rarity, ItemDef,
 } from './types'
+
+const RARITY_ORDER: Rarity[] = ['street', 'solid', 'connected', 'made', 'untouchable']
 
 /** Any elapsed gap longer than this is treated as time away, not a hitch. */
 const OFFLINE_THRESHOLD_SECONDS = 10
@@ -185,6 +187,8 @@ export class Engine {
     switch (d.kind) {
       case 'raid':
         return `Raided. They took ${fmtMoney(d.amount ?? ZERO)} and a third of the stock.`
+      case 'raidShielded':
+        return 'They turned the place over and found nothing. You knew they were coming.'
       case 'badBatch':
         return `${productName(d.subject)} is going out too weak. People are getting hurt, and it shows.`
       case 'bandUp':
@@ -361,6 +365,89 @@ export class Engine {
     this.save()
     this.notify()
     return true
+  }
+
+  // -- Crates --------------------------------------------------------------
+
+  /**
+   * Open one crate.
+   *
+   * Rolls a rarity from the tier's table, then a piece of that rarity. A
+   * duplicate feeds levels instead of being wasted, and an empty slot is
+   * filled automatically so a new player sees the effect without having to
+   * find the equip screen first.
+   */
+  openDuffel(tier: DuffelTier): OpenResult | null {
+    if (this.state.meta.duffels[tier] <= 0) return null
+
+    const item = this.rollItem(tier)
+    if (!item) return null
+
+    this.state.meta.duffels[tier] -= 1
+
+    const existing = this.state.meta.loadout[item.id]
+    let isNew = false
+    let leveledUp = false
+
+    if (!existing) {
+      this.state.meta.loadout[item.id] = { defId: item.id, level: 1, shards: 0 }
+      isNew = true
+    } else {
+      existing.shards += 1
+      while (
+        existing.level < BALANCE.MAX_ITEM_LEVEL &&
+        existing.shards >= shardsForLevel(existing.level)
+      ) {
+        existing.shards -= shardsForLevel(existing.level)
+        existing.level += 1
+        leveledUp = true
+      }
+    }
+
+    const owned = this.state.meta.loadout[item.id]
+
+    let autoEquipped = false
+    if (!this.state.meta.equipped[item.slot]) {
+      this.state.meta.equipped[item.slot] = item.id
+      autoEquipped = true
+    }
+
+    this.mods = computeModifiers(this.state, this.content)
+    this.save()
+    this.notify()
+
+    return {
+      tier,
+      item,
+      isNew,
+      level: owned.level,
+      leveledUp,
+      shards: owned.shards,
+      shardsForNext: owned.level >= BALANCE.MAX_ITEM_LEVEL ? 0 : shardsForLevel(owned.level),
+      autoEquipped,
+    }
+  }
+
+  /** Weighted rarity roll, then a uniform pick within that rarity. */
+  private rollItem(tier: DuffelTier): ItemDef | null {
+    const odds = DUFFEL_ODDS[tier]
+
+    let roll = Math.random()
+    let chosen: Rarity = 'street'
+    for (const r of RARITY_ORDER) {
+      const weight = odds[r]
+      if (roll < weight) { chosen = r; break }
+      roll -= weight
+      chosen = r
+    }
+
+    // A content pack with no items at the rolled rarity should degrade, not
+    // hand back nothing.
+    for (let i = RARITY_ORDER.indexOf(chosen); i >= 0; i--) {
+      const pool = this.content.items.filter((it) => it.rarity === RARITY_ORDER[i])
+      if (pool.length > 0) return pool[Math.floor(Math.random() * pool.length)]
+    }
+    return this.content.items[0] ?? null
   }
 
   equip(slot: ItemSlot, defId: string | null): boolean {

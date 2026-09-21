@@ -52,6 +52,7 @@ export function freshRun(content: ContentPack): RunState {
     recentRevenuePerSec: ZERO,
     bribesThisRun: 0,
     lastBand: 'cold',
+    raidShieldUsed: false,
     cleanEarnedThisRun: ZERO,
     startedAt: Date.now(),
   }

@@ -59,6 +59,15 @@ export const BALANCE = {
   /** Even a failed run leaves something, so trying is never worse than not. */
   MIN_SCORE_FLOOR: 0.1,
 
+  // -- Crates --------------------------------------------------------------
+  MAX_ITEM_LEVEL: 10,
+  /**
+   * Duplicates needed for the next level equals the current level, so a
+   * piece takes 45 copies to max. Common gear gets there; an Untouchable
+   * effectively never does, which is correct -- those are about the effect.
+   */
+  ITEM_SHARDS_PER_LEVEL: 1,
+
   // -- Heat ----------------------------------------------------------------
   HEAT_MAX: 100,
   HEAT_DECAY_PER_MIN: 0.8,
@@ -148,6 +157,18 @@ export const BALANCE = {
   /** A single step is never longer than this, so integration stays stable. */
   MAX_STEP_SECONDS: 60,
 } as const
+
+/** Rarity odds per crate tier. DESIGN.md section 9. */
+export const DUFFEL_ODDS = {
+  street:  { street: 0.70, solid: 0.25, connected: 0.05, made: 0.00, untouchable: 0.00 },
+  safe:    { street: 0.30, solid: 0.40, connected: 0.22, made: 0.07, untouchable: 0.01 },
+  armored: { street: 0.05, solid: 0.25, connected: 0.40, made: 0.25, untouchable: 0.05 },
+} as const
+
+/** Duplicates required to go from `level` to the next. */
+export function shardsForLevel(level: number): number {
+  return level * BALANCE.ITEM_SHARDS_PER_LEVEL
+}
 
 /**
  * What each minigame pays out, as a fraction of the MAX_* ceilings above.

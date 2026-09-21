@@ -597,6 +597,53 @@ and the grind becomes optional.
    within six seconds. Capped live spores at 8 and slowed maturity. Pressure
    should build, not detonate.
 
+### Part 4 — the Loadout
+
+Shipped: 48 items, duplicate levelling, crates with the tiered odds from
+section 9, all eight Untouchable effects, the Kit screen, and the crate
+opening.
+
+**The reason this system exists** is that it survives prestige. Everything
+else in a run is wiped; the kit is not. It is why cashing out is something
+you want to do rather than something you endure, and it is the monetisation
+surface. Both jobs depend on the opening moment landing.
+
+**The opening.** The rarity is rolled *before* the animation starts, so the
+glow building behind the crate can be the colour of the answer rather than a
+guess at it. Roughly 1.5s of strain with the seam lighting up, a 0.5s burst
+with a rotating ray sweep, then the card. Sound is a day-7 item.
+
+**Untouchable effects**, all eight implemented. Four in DESIGN.md depended
+on systems that do not exist yet and were reinterpreted rather than stubbed:
+
+| Item | Shipped as |
+|---|---|
+| Dead Man's Watch | The first raid of a run finds nothing |
+| Ghost Line | Suspicion cools twice as fast while away |
+| Clean Hands | A tenth of the pile washes itself, uncapped |
+| Nobody's Jacket | Below 40 suspicion you generate none |
+| The Long Chain | Prices climb with the age of the run, to +25% |
+| Nothing Personal | Your best district never walks away (rivals are Part 5) |
+| Company Car | Every district holds 25% more buyers (routes are a minigame) |
+| Dead Stock | No suspicion generated at all while away |
+
+**Duplicates level a piece** rather than being wasted: level equals the
+duplicates needed for the next one, so 45 copies to max at +12% of base per
+level. Common gear gets there; an Untouchable effectively never does, which
+is correct — those are bought for the effect, not the number.
+
+### Bugs found and fixed in Part 4
+
+1. **The reveal never fired.** The phase effect depended on `phase`, so when
+   it advanced to the burst at 1500ms the cleanup cancelled *both* pending
+   timers — including the reveal scheduled for 1960ms. The crate blew apart
+   and nothing came out. Each phase now schedules only the next one.
+2. **The totals panel lied.** It re-added the equipped items' stats, which is
+   not what the simulation applies: suspicion resistance is clamped at 90% so
+   the pressure system can never be switched off. It read +99% while the
+   engine used 90%. It now reads the engine's computed modifiers and marks
+   the clamp.
+
 ### Part 3 — the pressure systems made legible
 
 Heat, raids and laundering all worked after Part 1, but almost none of it

@@ -101,6 +101,19 @@ export function step(
   let heatGained = 0
   const badBatches = new Set<string>()
 
+  // Nothing Personal: whichever district is carrying you does not churn.
+  let protectedBlock: string | null = null
+  if (mods.uniques.has('nothing_personal')) {
+    let best = -1
+    for (const b of content.blocks) {
+      const bs = run.blocks[b.id]
+      if (bs?.unlocked && bs.customers > best) {
+        best = bs.customers
+        protectedBlock = b.id
+      }
+    }
+  }
+
   for (const bdef of content.blocks) {
     const bs = run.blocks[bdef.id]
     if (!bs || !bs.unlocked) continue
@@ -114,7 +127,9 @@ export function step(
     }
 
     if (live.length === 0) {
-      bs.customers = Math.max(0, bs.customers * (1 - BALANCE.CUSTOMER_DECAY_PER_MIN * dt / 60))
+      if (bdef.id !== protectedBlock) {
+        bs.customers = Math.max(0, bs.customers * (1 - BALANCE.CUSTOMER_DECAY_PER_MIN * dt / 60))
+      }
       continue
     }
 
@@ -125,11 +140,11 @@ export function step(
       worstEff = Math.min(worstEff, effectivePurity(ps.purity, mods, ps.buff))
     }
 
-    const ceiling = customerCeiling(bdef, state)
+    const ceiling = customerCeiling(bdef, state, mods)
     if (blockAccepts(bdef, worstEff)) {
       const growth = ceiling * BALANCE.CUSTOMER_GROWTH_PER_MIN * (dt / 60)
       bs.customers = Math.min(ceiling, bs.customers + growth)
-    } else {
+    } else if (bdef.id !== protectedBlock) {
       bs.customers = Math.max(0, bs.customers * (1 - BALANCE.CUSTOMER_DECAY_PER_MIN * dt / 60))
     }
 
@@ -190,6 +205,17 @@ export function step(
     }
   }
 
+  // Nobody's Jacket: under 40 you simply do not register.
+  if (mods.uniques.has('nobodys_jacket') && run.heat < 40) {
+    heatGained = 0
+    for (const id of Object.keys(report.heatByProduct)) report.heatByProduct[id] = 0
+  }
+  // Dead Stock: the crew works quietly while you are gone.
+  if (offline && mods.uniques.has('dead_stock')) {
+    heatGained = 0
+    for (const id of Object.keys(report.heatByProduct)) report.heatByProduct[id] = 0
+  }
+
   for (const id of badBatches) {
     report.events.push({ kind: 'badBatch', tone: 'bad', subject: id })
   }
@@ -206,9 +232,10 @@ export function step(
   }
 
   // -- 5. Heat -------------------------------------------------------------
-  const decayRate = offline
+  let decayRate = offline
     ? BALANCE.HEAT_DECAY_PER_MIN_OFFLINE
     : BALANCE.HEAT_DECAY_PER_MIN
+  if (offline && mods.uniques.has('ghost_line')) decayRate *= 2
   run.heat = run.heat + heatGained - decayRate * (dt / 60)
   run.heat = Math.max(0, Math.min(BALANCE.HEAT_MAX, run.heat))
   report.heatGained = heatGained
@@ -233,7 +260,7 @@ export function step(
   if (nowBand.raidChancePerMin > 0 && run.raidCooldownSeconds <= 0) {
     const p = 1 - Math.pow(1 - nowBand.raidChancePerMin, dt / 60)
     if (Math.random() < p) {
-      applyRaid(state, content, report)
+      applyRaid(state, content, report, mods)
     }
   }
 
@@ -241,9 +268,22 @@ export function step(
   return report
 }
 
-function applyRaid(state: GameState, content: ContentPack, report: StepReport): void {
+function applyRaid(
+  state: GameState, content: ContentPack, report: StepReport, mods: Modifiers,
+): void {
   const run = state.run
   report.raided = true
+
+  // Dead Man's Watch: they turn the place over and find nothing, once.
+  if (mods.uniques.has('deadmans_watch') && !run.raidShieldUsed) {
+    run.raidShieldUsed = true
+    run.heat = Math.max(0, run.heat - BALANCE.RAID_HEAT_RELIEF)
+    run.raidCooldownSeconds = BALANCE.RAID_COOLDOWN_MINUTES * 60
+    state.meta.duffels.safe += 1
+    report.duffelsEarned += 1
+    report.events.push({ kind: 'raidShielded', tone: 'good' })
+    return
+  }
 
   for (const def of content.products) {
     const ps = run.products[def.id]

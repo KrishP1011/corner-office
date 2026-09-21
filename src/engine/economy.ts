@@ -9,14 +9,18 @@ import type {
 // Modifiers
 // ---------------------------------------------------------------------------
 
-export const EMPTY_MODIFIERS: Modifiers = {
-  yield: 0,
-  purityFloor: 0,
-  price: 0,
-  heatResist: 0,
-  launderRate: 0,
-  offlineCapHours: BALANCE.OFFLINE_CAP_HOURS_BASE,
-  duffelDropRate: 0,
+export function emptyModifiers(): Modifiers {
+  return {
+    yield: 0,
+    purityFloor: 0,
+    price: 0,
+    heatResist: 0,
+    launderRate: 0,
+    offlineCapHours: BALANCE.OFFLINE_CAP_HOURS_BASE,
+    duffelDropRate: 0,
+    demandMult: 1,
+    uniques: new Set<string>(),
+  }
 }
 
 /** Item stats scale +12% of base per level. Level 10 is 2.08x the drop roll. */
@@ -29,7 +33,7 @@ export function itemStatAtLevel(base: number, level: number): number {
  * connections tree and crew -- into one flat struct the sim reads per tick.
  */
 export function computeModifiers(state: GameState, content: ContentPack): Modifiers {
-  const mods: Modifiers = { ...EMPTY_MODIFIERS }
+  const mods = emptyModifiers()
   const itemsById = new Map(content.items.map((i) => [i.id, i]))
 
   for (const defId of Object.values(state.meta.equipped)) {
@@ -43,6 +47,17 @@ export function computeModifiers(state: GameState, content: ContentPack): Modifi
       if (key === 'offlineCap') mods.offlineCapHours += value
       else mods[key] += value
     }
+
+    if (def.unique) mods.uniques.add(def.unique)
+  }
+
+  // Uniques that are simply a number resolve here; the rest are applied at
+  // the point in the simulation where they actually mean something.
+  if (mods.uniques.has('company_car')) mods.demandMult *= 1.25
+  if (mods.uniques.has('long_chain')) {
+    // The longer this identity has been running, the better your prices.
+    const hours = (Date.now() - state.run.startedAt) / 3_600_000
+    mods.price += Math.min(0.25, Math.max(0, hours) * 0.01)
   }
 
   // Heat resistance is a diminishing shield, never an off switch -- at 100%
@@ -145,15 +160,16 @@ export function unitPrice(
  * should only pile up when you have cut too hard, not as a matter of course.
  */
 export function customerCeiling(
-  block: BlockDef, state: GameState,
+  block: BlockDef, state: GameState, mods?: Modifiers,
 ): number {
   let levelSum = 0
   for (const want of block.wants) {
     levelSum += state.run.products[want]?.level ?? 0
   }
-  return block.volume * (
+  const base = block.volume * (
     BALANCE.CUSTOMER_CEIL_BASE + BALANCE.CUSTOMER_CEIL_PER_LEVEL * levelSum
   )
+  return base * (mods?.demandMult ?? 1)
 }
 
 /** Whether this district still accepts product at the given perceived purity. */
@@ -236,6 +252,11 @@ export function launderPerMinute(
   const byBaseRate = dirty.mul(big(BALANCE.BASE_LAUNDER_RATE_PER_MIN))
   const baseCap = big(BALANCE.BASE_LAUNDER_CAP)
   let total = byBaseRate.lt(baseCap) ? byBaseRate : baseCap
+
+  // Clean Hands: a tenth of the pile washes itself, with no ceiling.
+  if (mods.uniques.has('clean_hands')) {
+    total = total.add(dirty.mul(big(0.10)))
+  }
 
   for (const id of state.run.ownedFronts) {
     const f = frontsById.get(id)

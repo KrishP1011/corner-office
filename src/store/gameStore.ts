@@ -5,9 +5,44 @@ import { big, ZERO, type Big } from '../engine/bignum'
 import {
   heatBand, dirtyCap, launderPerMinute, yieldPerCycle,
   customerCeiling, effectivePurity, blockAccepts, autoRunUnlocked,
+  itemStatAtLevel,
 } from '../engine/economy'
-import type { GameEvent } from '../engine/types'
-import { BALANCE } from '../engine/balance'
+import type {
+  GameEvent, ItemDef, ItemSlot, StatKey, Rarity,
+} from '../engine/types'
+
+export const SLOT_ORDER: ItemSlot[] = [
+  'watch', 'chain', 'burner', 'piece', 'ride', 'briefcase', 'jacket', 'kicks',
+]
+
+export const SLOT_LABEL: Record<ItemSlot, string> = {
+  watch: 'Watch', chain: 'Chain', burner: 'Line', piece: 'Piece',
+  ride: 'Ride', briefcase: 'Case', jacket: 'Coat', kicks: 'Shoes',
+}
+
+export const RARITY_LABEL: Record<Rarity, string> = {
+  street: 'Street', solid: 'Solid', connected: 'Connected',
+  made: 'Made', untouchable: 'Untouchable',
+}
+
+/** One ramp, used by every rarity frame, glow and label in the game. */
+export const RARITY_COLOR: Record<Rarity, string> = {
+  street: '#7d8794',
+  solid: '#6f9f7a',
+  connected: '#5b8fc9',
+  made: '#b06fd0',
+  untouchable: '#e0b94a',
+}
+
+export const STAT_LABEL: Record<StatKey, string> = {
+  yield: 'output',
+  purityFloor: 'proof floor',
+  price: 'price',
+  heatResist: 'suspicion resist',
+  launderRate: 'wash rate',
+  offlineCap: 'hours away',
+}
+import { BALANCE, shardsForLevel } from '../engine/balance'
 import type {
   ThemeStrings, ProductDef, LocationDef, FrontDef, BlockDef, HeatBandInfo,
   QualityBuff,
@@ -80,6 +115,25 @@ export interface FrontView {
   cost: Big
 }
 
+export interface ItemView {
+  def: ItemDef
+  owned: boolean
+  level: number
+  shards: number
+  shardsForNext: number
+  equipped: boolean
+  /** Stat magnitudes at the item's current level. */
+  stats: { key: StatKey; value: number }[]
+}
+
+export interface SlotView {
+  slot: ItemSlot
+  label: string
+  equipped: ItemView | null
+  /** Everything owned that fits this slot, best first. */
+  options: ItemView[]
+}
+
 /** One line's contribution to the heat you are currently generating. */
 export interface HeatSource {
   id: string
@@ -111,6 +165,17 @@ export interface Snapshot {
   canBribe: boolean
   bribesThisRun: number
   events: GameEvent[]
+  loadout: SlotView[]
+  ownedItems: number
+  totalItems: number
+  /**
+   * The modifiers the simulation is actually applying, not a re-sum of the
+   * equipped items. Those differ -- heat resistance is clamped at 90% so the
+   * pressure system can never be switched off entirely -- and a totals panel
+   * that disagrees with the engine is worse than no totals panel.
+   */
+  modTotals: { key: StatKey; value: number }[]
+  uniquesActive: string[]
   products: ProductView[]
   blocks: BlockView[]
   locations: LocationView[]
@@ -195,6 +260,49 @@ function buildBlocks(): BlockView[] {
   })
 }
 
+const RARITY_RANK: Record<Rarity, number> = {
+  street: 0, solid: 1, connected: 2, made: 3, untouchable: 4,
+}
+
+function viewItem(def: ItemDef): ItemView {
+  const owned = engine.state.meta.loadout[def.id]
+  const level = owned?.level ?? 1
+
+  return {
+    def,
+    owned: !!owned,
+    level,
+    shards: owned?.shards ?? 0,
+    shardsForNext: level >= BALANCE.MAX_ITEM_LEVEL ? 0 : shardsForLevel(level),
+    equipped: engine.state.meta.equipped[def.slot] === def.id,
+    stats: (Object.entries(def.stats) as [StatKey, number][]).map(([key, base]) => ({
+      key,
+      value: itemStatAtLevel(base, level),
+    })),
+  }
+}
+
+function buildLoadout(): SlotView[] {
+  const { content, state } = engine
+
+  return SLOT_ORDER.map((slot) => {
+    const equippedId = state.meta.equipped[slot]
+
+    const options = content.items
+      .filter((i) => i.slot === slot && state.meta.loadout[i.id])
+      .map(viewItem)
+      .sort((a, b) =>
+        RARITY_RANK[b.def.rarity] - RARITY_RANK[a.def.rarity] || b.level - a.level)
+
+    return {
+      slot,
+      label: SLOT_LABEL[slot],
+      equipped: equippedId ? viewItem(content.items.find((i) => i.id === equippedId)!) : null,
+      options,
+    }
+  })
+}
+
 function build(): Snapshot {
   const { state, content, mods } = engine
   const run = state.run
@@ -254,6 +362,20 @@ function build(): Snapshot {
     canBribe: run.heat > 0 && run.dirtyCash.gte(bribe),
     bribesThisRun: run.bribesThisRun,
     events: engine.events.slice(0, 20),
+    loadout: buildLoadout(),
+    ownedItems: Object.keys(state.meta.loadout).length,
+    totalItems: content.items.length,
+    modTotals: ([
+      ['yield', mods.yield],
+      ['purityFloor', mods.purityFloor],
+      ['price', mods.price],
+      ['heatResist', mods.heatResist],
+      ['launderRate', mods.launderRate],
+      ['offlineCap', mods.offlineCapHours - BALANCE.OFFLINE_CAP_HOURS_BASE],
+    ] as [StatKey, number][])
+      .filter(([, v]) => Math.abs(v) > 1e-9)
+      .map(([key, value]) => ({ key, value })),
+    uniquesActive: [...mods.uniques],
     products: buildProducts(used, slots),
     blocks: buildBlocks(),
     locations: content.locations.map((def) => ({
@@ -309,7 +431,7 @@ export function useGame(): Snapshot {
 // Pure UI state -- never persisted, never touched by the simulation.
 // ---------------------------------------------------------------------------
 
-export type Tab = 'production' | 'territory' | 'law' | 'fronts' | 'places'
+export type Tab = 'production' | 'territory' | 'kit' | 'law' | 'fronts' | 'places'
 export type BuyAmount = 1 | 10 | 100 | -1
 
 interface UiState {

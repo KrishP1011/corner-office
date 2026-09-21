@@ -113,6 +113,7 @@ export function deserialize(json: string, content: ContentPack): GameState {
   state.run.lastBand = ['cold', 'warm', 'hot', 'burned'].includes(r.lastBand)
     ? r.lastBand
     : 'cold'
+  state.run.raidShieldUsed = r.raidShieldUsed === true
 
   state.run.ownedFronts = Array.isArray(r.ownedFronts)
     ? r.ownedFronts.filter((id: unknown) => content.fronts.some((f) => f.id === id))
@@ -191,7 +192,7 @@ export function deserialize(json: string, content: ContentPack): GameState {
       if (!itemIds.has(defId)) continue
       state.meta.loadout[defId] = {
         defId,
-        level: clampNumber(owned?.level, 1, 10, 1),
+        level: clampNumber(owned?.level, 1, BALANCE.MAX_ITEM_LEVEL, 1),
         shards: clampNumber(owned?.shards, 0, Number.MAX_SAFE_INTEGER, 0),
       }
     }

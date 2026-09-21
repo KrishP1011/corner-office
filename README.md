@@ -135,9 +135,28 @@ time), and simply **cutting less**.
 Raids take 30% of stock and 20% of loose cash, grant a crate, and buy 45
 minutes of quiet. They fire a toast rather than happening silently.
 
+## The Loadout
+
+Eight slots, 48 pieces, five rarities. This is the only progression that
+survives a prestige, which makes it both the reason to cash out and the
+monetisation surface.
+
+Crates roll a rarity from their tier's table and then a piece of it.
+Duplicates level a piece rather than being wasted — 45 copies to reach level
+10, at +12% of the base roll per level. An empty slot fills automatically so
+a new player sees the effect without hunting for an equip screen.
+
+Each slot's Untouchable carries a unique effect rather than a bigger number:
+the first raid of a run finding nothing, a tenth of the pile washing itself,
+generating no suspicion at all below 40.
+
+The crate opening rolls its result before the animation begins, so the glow
+building behind the lid is already the colour of the answer.
+
 ## Status
 
-Parts 1-3 of a seven-part build. Engine, economy, save system, content
+Parts 1-4 of a seven-part build. Engine, economy, save system, content
 pipeline, dev tooling, the five minigames, the heat and laundering systems
-with their screens, and the event log are in. Still to come: the Loadout and
-crates, crew, the territory map proper, prestige UI, and the juice pass.
+with their screens, the event log, and the Loadout with its crates are in.
+Still to come: crew, the territory map proper, prestige UI, and the juice
+pass.

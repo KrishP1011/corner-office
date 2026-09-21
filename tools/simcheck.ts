@@ -12,7 +12,10 @@ import { createInitialState } from '../src/engine/state'
 import {
   computeModifiers, cutMultiplier, priceMultiplier, stationCost,
   buffFromScore, autoRunUnlocked, customerCeiling, bribeCost, heatBand,
+  itemStatAtLevel, launderPerMinute,
 } from '../src/engine/economy'
+import { DUFFEL_ODDS, shardsForLevel } from '../src/engine/balance'
+import type { ItemSlot, Rarity, StatKey } from '../src/engine/types'
 import { BALANCE } from '../src/engine/balance'
 import { runFor } from '../src/engine/tick'
 import { fmt, fmtMoney, big, type Big } from '../src/engine/bignum'
@@ -305,6 +308,96 @@ console.log(`  revenue=${fmtMoney(off.revenue)}  units=${fmt(off.unitsSold)}  ra
 check('offline crate drops stay reasonable', off.duffelsEarned <= 12, `${off.duffelsEarned} crates`)
 
 // ---------------------------------------------------------------------------
+header('THE LOADOUT')
+
+const bySlot = new Map<ItemSlot, number>()
+const byRarity = new Map<Rarity, number>()
+for (const it of content.items) {
+  bySlot.set(it.slot, (bySlot.get(it.slot) ?? 0) + 1)
+  byRarity.set(it.rarity, (byRarity.get(it.rarity) ?? 0) + 1)
+}
+console.log(`  ${content.items.length} items across ${bySlot.size} slots`)
+console.log(`  ${[...byRarity.entries()].map(([r, n]) => `${r} ${n}`).join(', ')}`)
+
+check('every slot has gear', bySlot.size === 8)
+check('each slot has six pieces', [...bySlot.values()].every((n) => n === 6))
+check('every rarity is represented', byRarity.size === 5)
+check('there is one untouchable per slot', (byRarity.get('untouchable') ?? 0) === 8)
+check('every untouchable carries a unique effect',
+  content.items.filter((i) => i.rarity === 'untouchable').every((i) => !!i.unique))
+check('no unique effect is duplicated', (() => {
+  const u = content.items.filter((i) => i.unique).map((i) => i.unique!)
+  return new Set(u).size === u.length
+})())
+
+for (const [tier, odds] of Object.entries(DUFFEL_ODDS)) {
+  const sum = Object.values(odds).reduce((a, b) => a + b, 0)
+  check(`${tier} crate odds sum to 1`, Math.abs(sum - 1) < 1e-9, sum.toFixed(3))
+}
+check('better crates carry better odds',
+  DUFFEL_ODDS.armored.made > DUFFEL_ODDS.safe.made &&
+  DUFFEL_ODDS.safe.made > DUFFEL_ODDS.street.made)
+
+// Levelling: +12% of base per level, so ten is 2.08x.
+console.log(`  a 0.25 stat at Lv1=${itemStatAtLevel(0.25, 1).toFixed(3)} Lv10=${itemStatAtLevel(0.25, 10).toFixed(3)}`)
+check('level 1 is the base roll', Math.abs(itemStatAtLevel(0.25, 1) - 0.25) < 1e-9)
+check('level 10 is 2.08x the roll', Math.abs(itemStatAtLevel(1, 10) - 2.08) < 1e-9)
+const toMax = Array.from({ length: 9 }, (_, i) => shardsForLevel(i + 1)).reduce((a, b) => a + b, 0)
+console.log(`  duplicates needed to reach level 10: ${toMax}`)
+check('maxing a piece takes a real grind', toMax === 45)
+
+// Equipping actually changes the numbers.
+function withGear(ids: string[]) {
+  const s = createInitialState(content)
+  for (const id of ids) {
+    const def = content.items.find((i) => i.id === id)!
+    s.meta.loadout[id] = { defId: id, level: 1, shards: 0 }
+    s.meta.equipped[def.slot] = id
+  }
+  return s
+}
+
+const bare = computeModifiers(createInitialState(content), content)
+const geared = computeModifiers(withGear(['watch_deadman', 'case_clean', 'ride_company']), content)
+console.log(`  bare proof floor=${bare.purityFloor}  geared=${geared.purityFloor}`)
+check('gear raises the proof floor', geared.purityFloor > bare.purityFloor)
+check('gear extends time away', geared.offlineCapHours > bare.offlineCapHours)
+check('equipped untouchables register their effects',
+  geared.uniques.has('deadmans_watch') && geared.uniques.has('clean_hands'))
+check('Company Car widens demand', geared.demandMult > 1)
+
+// Uniques have to do something, not just read well.
+const cleanState = withGear(['case_clean'])
+cleanState.run.dirtyCash = big(1_000_000)
+const plainState = createInitialState(content)
+plainState.run.dirtyCash = big(1_000_000)
+const withClean = launderPerMinute(cleanState, content, computeModifiers(cleanState, content))
+const withoutClean = launderPerMinute(plainState, content, computeModifiers(plainState, content))
+console.log(`  wash rate on $1M: plain=${fmtMoney(withoutClean)}/min  Clean Hands=${fmtMoney(withClean)}/min`)
+check('Clean Hands washes more', withClean.gt(withoutClean.mul(2)))
+
+const jacket = withGear(['jacket_nobody'])
+jacket.run.products['cider'].level = 200
+jacket.run.heat = 10
+for (const b of content.blocks) {
+  const bs = jacket.run.blocks[b.id]
+  if (bs.unlocked) bs.customers = customerCeiling(b, jacket)
+}
+const jacketReport = runFor(jacket, content, computeModifiers(jacket, content), 60, false)
+check("Nobody's Jacket suppresses heat under 40", jacketReport.heatGained === 0,
+  `heat gained ${jacketReport.heatGained.toFixed(3)}`)
+
+const watch = withGear(['watch_deadman'])
+watch.run.heat = 99
+watch.run.products['cider'].level = 100
+watch.run.dirtyCash = big(100000)
+const beforeRaid = watch.run.dirtyCash.toString()
+const watchReport = runFor(watch, content, computeModifiers(watch, content), 900, false)
+check("Dead Man's Watch absorbs the first raid",
+  !watchReport.raided || watch.run.raidShieldUsed,
+  watchReport.raided ? `shielded=${watch.run.raidShieldUsed}, cash ${beforeRaid} -> ${watch.run.dirtyCash.toString()}` : 'no raid fired')
+
+// ---------------------------------------------------------------------------
 header('SAVE')
 s3.run.cleanCash = big('1.2345e40')
 s3.run.products['cider'].purity = 37
@@ -322,6 +415,23 @@ check('bonuses survive a round trip',
   back2.run.products['beer'].buff?.yieldMult === s3.run.products['beer'].buff!.yieldMult)
 check('play counts and auto-run survive',
   back2.meta.minigamePlays['beer'] === 12 && back2.meta.autoRun['beer'] === true)
+
+s3.meta.loadout['watch_deadman'] = { defId: 'watch_deadman', level: 4, shards: 2 }
+s3.meta.equipped['watch'] = 'watch_deadman'
+s3.meta.duffels = { street: 3, safe: 2, armored: 1 }
+const back3 = deserialize(serialize(s3), content)
+check('gear and its level survive a round trip',
+  back3.meta.loadout['watch_deadman']?.level === 4 &&
+  back3.meta.loadout['watch_deadman']?.shards === 2)
+check('what you have on survives', back3.meta.equipped['watch'] === 'watch_deadman')
+check('unopened crates survive', back3.meta.duffels.armored === 1)
+check('gear whose definition vanished is dropped, not kept', (() => {
+  const raw = JSON.parse(serialize(s3))
+  raw.meta.loadout['ghost_of_a_thing'] = { defId: 'ghost_of_a_thing', level: 9, shards: 0 }
+  raw.meta.equipped['chain'] = 'ghost_of_a_thing'
+  const back = deserialize(JSON.stringify(raw), content)
+  return !back.meta.loadout['ghost_of_a_thing'] && !back.meta.equipped['chain']
+})())
 check('corrupt save does not throw', (() => {
   try { deserialize('{"schemaVersion":1,"run":{"dirtyCash":"garbage"}}', content); return true }
   catch { return false }

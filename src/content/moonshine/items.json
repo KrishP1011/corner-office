@@ -1,14 +1,502 @@
 [
-  { "id": "watch_pocket",   "name": "Dented Pocket Watch", "slot": "watch",     "rarity": "street",      "stats": { "yield": 0.03 },                      "flavor": "Runs four minutes fast. You have learned to account for it." },
-  { "id": "watch_deadman",  "name": "Dead Man's Watch",    "slot": "watch",     "rarity": "untouchable", "stats": { "yield": 0.35, "offlineCap": 4 },      "unique": "deadmans_watch", "flavor": "Taken off a man who no longer needed the time." },
-  { "id": "chain_plated",   "name": "Plated Chain",        "slot": "chain",     "rarity": "street",      "stats": { "price": 0.03 },                      "flavor": "Gold for about a week, then green." },
-  { "id": "burner_party",   "name": "Party Line",          "slot": "burner",    "rarity": "street",      "stats": { "price": 0.02, "yield": 0.02 },       "flavor": "Half the county listens in. Half the county buys." },
-  { "id": "burner_ghost",   "name": "Ghost Line",          "slot": "burner",    "rarity": "untouchable", "stats": { "heatResist": 0.30 },                 "unique": "ghost_line", "flavor": "A number that was never issued, on an exchange that burned down in 1919." },
-  { "id": "piece_derringer","name": "Vest Derringer",      "slot": "piece",     "rarity": "street",      "stats": { "heatResist": 0.03 },                 "flavor": "Two shots. Mostly it is the showing that works." },
-  { "id": "ride_flivver",   "name": "Rusted Flivver",      "slot": "ride",      "rarity": "street",      "stats": { "yield": 0.04 },                      "flavor": "Forty on the flat. Thirty with a load." },
-  { "id": "case_cardboard", "name": "Pasteboard Case",     "slot": "briefcase", "rarity": "street",      "stats": { "launderRate": 0.04 },                "flavor": "Holds money. Does not hold rain." },
-  { "id": "case_cleanhands","name": "Clean Hands",         "slot": "briefcase", "rarity": "untouchable", "stats": { "launderRate": 0.40 },                "unique": "clean_hands", "flavor": "Belonged to an alderman. Still smells faintly of his cologne." },
-  { "id": "jacket_oilskin", "name": "Oilskin Coat",        "slot": "jacket",    "rarity": "street",      "stats": { "heatResist": 0.04 },                 "flavor": "Smells like the river. Everyone on the river smells like the river." },
-  { "id": "jacket_nobody",  "name": "Nobody's Jacket",     "slot": "jacket",    "rarity": "untouchable", "stats": { "heatResist": 0.38 },                 "unique": "nobodys_jacket", "flavor": "Gray, unremarkable, the exact wrong weight for every season. No one has ever described you in it." },
-  { "id": "kicks_workboot", "name": "Cracked Work Boots",  "slot": "kicks",     "rarity": "street",      "stats": { "yield": 0.03 },                      "flavor": "Resoled twice. You walk the whole route in these." }
+  {
+    "id": "watch_dented",
+    "name": "Dented Pocket Watch",
+    "slot": "watch",
+    "rarity": "street",
+    "stats": {
+      "purityFloor": 2
+    },
+    "flavor": "Runs four minutes fast. You have learned to account for it."
+  },
+  {
+    "id": "watch_borrowed",
+    "name": "Borrowed Wristwatch",
+    "slot": "watch",
+    "rarity": "street",
+    "stats": {
+      "purityFloor": 3
+    },
+    "flavor": "It belonged to someone who is not asking for it back."
+  },
+  {
+    "id": "watch_railroad",
+    "name": "Railroad Grade",
+    "slot": "watch",
+    "rarity": "solid",
+    "stats": {
+      "purityFloor": 6
+    },
+    "flavor": "Built so trains would not hit each other. Works just as well on a still."
+  },
+  {
+    "id": "watch_jeweled",
+    "name": "Jeweled Movement",
+    "slot": "watch",
+    "rarity": "connected",
+    "stats": {
+      "purityFloor": 11
+    },
+    "flavor": "Seventeen jewels. It does not drift, and neither do you."
+  },
+  {
+    "id": "watch_hunter",
+    "name": "Gold Hunter Case",
+    "slot": "watch",
+    "rarity": "made",
+    "stats": {
+      "purityFloor": 20,
+      "offlineCap": 1
+    },
+    "flavor": "Snaps shut over the face. You check it without anyone seeing you check it."
+  },
+  {
+    "id": "watch_deadman",
+    "name": "Dead Man's Watch",
+    "slot": "watch",
+    "rarity": "untouchable",
+    "stats": {
+      "purityFloor": 34,
+      "offlineCap": 4
+    },
+    "unique": "deadmans_watch",
+    "flavor": "Still wound. Taken off a man who no longer needed to know the time."
+  },
+  {
+    "id": "chain_plated",
+    "name": "Plated Chain",
+    "slot": "chain",
+    "rarity": "street",
+    "stats": {
+      "price": 0.03
+    },
+    "flavor": "Gold for about a week, then green."
+  },
+  {
+    "id": "chain_fob",
+    "name": "Brass Fob Chain",
+    "slot": "chain",
+    "rarity": "street",
+    "stats": {
+      "price": 0.02,
+      "yield": 0.02
+    },
+    "flavor": "Holds the watch. Holds it badly, but it holds it."
+  },
+  {
+    "id": "chain_pawn",
+    "name": "Pawnshop Gold",
+    "slot": "chain",
+    "rarity": "solid",
+    "stats": {
+      "price": 0.07
+    },
+    "flavor": "Somebody's wedding money. The ticket expired in March."
+  },
+  {
+    "id": "chain_charm",
+    "name": "Watch Chain and Charm",
+    "slot": "chain",
+    "rarity": "connected",
+    "stats": {
+      "price": 0.13
+    },
+    "flavor": "The charm is a tiny gold horseshoe. It has not helped once, and you still wear it."
+  },
+  {
+    "id": "chain_rope",
+    "name": "Heavy Rope Chain",
+    "slot": "chain",
+    "rarity": "made",
+    "stats": {
+      "price": 0.24
+    },
+    "flavor": "Eleven ounces. People quote you better prices before you open your mouth."
+  },
+  {
+    "id": "chain_long",
+    "name": "The Long Chain",
+    "slot": "chain",
+    "rarity": "untouchable",
+    "stats": {
+      "price": 0.32
+    },
+    "unique": "long_chain",
+    "flavor": "Every link was added in a different year. You remember what each one cost."
+  },
+  {
+    "id": "burner_party",
+    "name": "Party Line",
+    "slot": "burner",
+    "rarity": "street",
+    "stats": {
+      "price": 0.02,
+      "yield": 0.02
+    },
+    "flavor": "Half the county listens in. Half the county buys."
+  },
+  {
+    "id": "burner_drugstore",
+    "name": "Drugstore Phone",
+    "slot": "burner",
+    "rarity": "street",
+    "stats": {
+      "yield": 0.03
+    },
+    "flavor": "Back wall, past the soda fountain. The pharmacist never looks up."
+  },
+  {
+    "id": "burner_private",
+    "name": "Private Exchange",
+    "slot": "burner",
+    "rarity": "solid",
+    "stats": {
+      "yield": 0.07
+    },
+    "flavor": "Two rings means yes. Three means the road is being watched."
+  },
+  {
+    "id": "burner_switchboard",
+    "name": "Switchboard Girl",
+    "slot": "burner",
+    "rarity": "connected",
+    "stats": {
+      "yield": 0.12,
+      "price": 0.06
+    },
+    "flavor": "Marcy on the night board. She connects your calls and forgets them."
+  },
+  {
+    "id": "burner_trunk",
+    "name": "Unlisted Trunk",
+    "slot": "burner",
+    "rarity": "made",
+    "stats": {
+      "yield": 0.22,
+      "price": 0.1
+    },
+    "flavor": "A line that appears on no directory and no bill."
+  },
+  {
+    "id": "burner_ghost",
+    "name": "Ghost Line",
+    "slot": "burner",
+    "rarity": "untouchable",
+    "stats": {
+      "heatResist": 0.3,
+      "yield": 0.18
+    },
+    "unique": "ghost_line",
+    "flavor": "A number that was never issued, on an exchange that burned down in 1919."
+  },
+  {
+    "id": "piece_derringer",
+    "name": "Vest Derringer",
+    "slot": "piece",
+    "rarity": "street",
+    "stats": {
+      "heatResist": 0.03
+    },
+    "flavor": "Two shots. Mostly it is the showing that works."
+  },
+  {
+    "id": "piece_axe",
+    "name": "Hickory Axe Handle",
+    "slot": "piece",
+    "rarity": "street",
+    "stats": {
+      "heatResist": 0.02,
+      "yield": 0.02
+    },
+    "flavor": "Perfectly legal to carry. That is the entire point of it."
+  },
+  {
+    "id": "piece_revolver",
+    "name": "Army Revolver",
+    "slot": "piece",
+    "rarity": "solid",
+    "stats": {
+      "heatResist": 0.07
+    },
+    "flavor": "Came back from France in a duffel and has not been fired since."
+  },
+  {
+    "id": "piece_shotgun",
+    "name": "Cut-Down Shotgun",
+    "slot": "piece",
+    "rarity": "connected",
+    "stats": {
+      "heatResist": 0.13
+    },
+    "flavor": "Rides under the seat. The sound it makes when it opens ends most conversations."
+  },
+  {
+    "id": "piece_typewriter",
+    "name": "Chicago Typewriter",
+    "slot": "piece",
+    "rarity": "made",
+    "stats": {
+      "heatResist": 0.23
+    },
+    "flavor": "Fits in a violin case, which fools nobody and impresses everybody."
+  },
+  {
+    "id": "piece_nothing",
+    "name": "Nothing Personal",
+    "slot": "piece",
+    "rarity": "untouchable",
+    "stats": {
+      "heatResist": 0.31
+    },
+    "unique": "nothing_personal",
+    "flavor": "You have never drawn it. Everyone who matters knows you have it."
+  },
+  {
+    "id": "ride_flivver",
+    "name": "Rusted Flivver",
+    "slot": "ride",
+    "rarity": "street",
+    "stats": {
+      "yield": 0.04
+    },
+    "flavor": "Forty on the flat. Thirty with a load."
+  },
+  {
+    "id": "ride_mule",
+    "name": "Mule and Cart",
+    "slot": "ride",
+    "rarity": "street",
+    "stats": {
+      "yield": 0.03,
+      "heatResist": 0.02
+    },
+    "flavor": "Slow, but no revenuer has ever pulled over a mule."
+  },
+  {
+    "id": "ride_springs",
+    "name": "Reinforced Springs",
+    "slot": "ride",
+    "rarity": "solid",
+    "stats": {
+      "yield": 0.08
+    },
+    "flavor": "A loaded car sits low and a low car gets stopped. These fix that."
+  },
+  {
+    "id": "ride_roadster",
+    "name": "Tuned Roadster",
+    "slot": "ride",
+    "rarity": "connected",
+    "stats": {
+      "yield": 0.14
+    },
+    "flavor": "Bored out over the winter in a barn. It does not sound like what it is."
+  },
+  {
+    "id": "ride_armored",
+    "name": "Armored Sedan",
+    "slot": "ride",
+    "rarity": "made",
+    "stats": {
+      "yield": 0.25,
+      "heatResist": 0.08
+    },
+    "flavor": "Plate behind the doors, glass an inch thick. Corners like a barge."
+  },
+  {
+    "id": "ride_company",
+    "name": "Company Car",
+    "slot": "ride",
+    "rarity": "untouchable",
+    "stats": {
+      "yield": 0.33
+    },
+    "unique": "company_car",
+    "flavor": "Registered to a firm that exists only as a filing cabinet in Delaware."
+  },
+  {
+    "id": "case_pasteboard",
+    "name": "Pasteboard Case",
+    "slot": "briefcase",
+    "rarity": "street",
+    "stats": {
+      "launderRate": 0.04
+    },
+    "flavor": "Holds money. Does not hold rain."
+  },
+  {
+    "id": "case_canvas",
+    "name": "Canvas Satchel",
+    "slot": "briefcase",
+    "rarity": "street",
+    "stats": {
+      "launderRate": 0.03
+    },
+    "flavor": "Says mail carrier from a distance, which is the whole idea."
+  },
+  {
+    "id": "case_attache",
+    "name": "Leather Attache",
+    "slot": "briefcase",
+    "rarity": "solid",
+    "stats": {
+      "launderRate": 0.08
+    },
+    "flavor": "Scuffed at the corners in a way that suggests years of honest work."
+  },
+  {
+    "id": "case_portfolio",
+    "name": "Banker's Portfolio",
+    "slot": "briefcase",
+    "rarity": "connected",
+    "stats": {
+      "launderRate": 0.15
+    },
+    "flavor": "Nobody stops a man carrying one of these. They hold the door."
+  },
+  {
+    "id": "case_dispatch",
+    "name": "Locked Dispatch Box",
+    "slot": "briefcase",
+    "rarity": "made",
+    "stats": {
+      "launderRate": 0.26
+    },
+    "flavor": "Two keys, and you have both. The second one is for the look of the thing."
+  },
+  {
+    "id": "case_clean",
+    "name": "Clean Hands",
+    "slot": "briefcase",
+    "rarity": "untouchable",
+    "stats": {
+      "launderRate": 0.4
+    },
+    "unique": "clean_hands",
+    "flavor": "Belonged to an alderman. Still smells faintly of his cologne."
+  },
+  {
+    "id": "jacket_oilskin",
+    "name": "Oilskin Coat",
+    "slot": "jacket",
+    "rarity": "street",
+    "stats": {
+      "heatResist": 0.04
+    },
+    "flavor": "Smells like the river. Everyone on the river smells like the river."
+  },
+  {
+    "id": "jacket_patched",
+    "name": "Patched Work Coat",
+    "slot": "jacket",
+    "rarity": "street",
+    "stats": {
+      "heatResist": 0.03
+    },
+    "flavor": "Four different men's elbows. Nobody looks twice at a working man."
+  },
+  {
+    "id": "jacket_wool",
+    "name": "Wool Overcoat",
+    "slot": "jacket",
+    "rarity": "solid",
+    "stats": {
+      "heatResist": 0.08
+    },
+    "flavor": "Heavy enough to hide a bottle in each pocket and hang straight."
+  },
+  {
+    "id": "jacket_topcoat",
+    "name": "Tailored Topcoat",
+    "slot": "jacket",
+    "rarity": "connected",
+    "stats": {
+      "heatResist": 0.14
+    },
+    "flavor": "Cut so the shoulders lie flat over whatever is under them."
+  },
+  {
+    "id": "jacket_chesterfield",
+    "name": "Camelhair Chesterfield",
+    "slot": "jacket",
+    "rarity": "made",
+    "stats": {
+      "heatResist": 0.25
+    },
+    "flavor": "Velvet collar. You get waved through doors you were not going to be waved through."
+  },
+  {
+    "id": "jacket_nobody",
+    "name": "Nobody's Jacket",
+    "slot": "jacket",
+    "rarity": "untouchable",
+    "stats": {
+      "heatResist": 0.38
+    },
+    "unique": "nobodys_jacket",
+    "flavor": "Grey, unremarkable, the exact wrong weight for every season. No one has ever described you in it."
+  },
+  {
+    "id": "kicks_work",
+    "name": "Cracked Work Boots",
+    "slot": "kicks",
+    "rarity": "street",
+    "stats": {
+      "yield": 0.03
+    },
+    "flavor": "Resoled twice. You walk the whole route in these."
+  },
+  {
+    "id": "kicks_deck",
+    "name": "Canvas Deck Shoes",
+    "slot": "kicks",
+    "rarity": "street",
+    "stats": {
+      "yield": 0.02,
+      "price": 0.02
+    },
+    "flavor": "Quiet on a loading dock, which matters more than they look like it should."
+  },
+  {
+    "id": "kicks_brogues",
+    "name": "Resoled Brogues",
+    "slot": "kicks",
+    "rarity": "solid",
+    "stats": {
+      "yield": 0.07
+    },
+    "flavor": "Good leather, bad history. The cobbler asked no questions about the stain."
+  },
+  {
+    "id": "kicks_wingtip",
+    "name": "Wingtip Oxfords",
+    "slot": "kicks",
+    "rarity": "connected",
+    "stats": {
+      "yield": 0.13
+    },
+    "flavor": "You bought them to get into the Marquis. They worked the first night."
+  },
+  {
+    "id": "kicks_lasts",
+    "name": "Custom Lasts",
+    "slot": "kicks",
+    "rarity": "made",
+    "stats": {
+      "yield": 0.24
+    },
+    "flavor": "Made to a wooden model of your own foot. You could walk to the county line."
+  },
+  {
+    "id": "kicks_deadstock",
+    "name": "Dead Stock",
+    "slot": "kicks",
+    "rarity": "untouchable",
+    "stats": {
+      "yield": 0.3,
+      "offlineCap": 2
+    },
+    "unique": "dead_stock",
+    "flavor": "Never worn, never sold, sat in a back room through the whole decade waiting for you."
+  }
 ]

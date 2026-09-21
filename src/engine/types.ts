@@ -215,6 +215,8 @@ export interface RunState {
   bribesThisRun: number
   /** Last heat band seen, so a crossing can be announced once. */
   lastBand: 'cold' | 'warm' | 'hot' | 'burned'
+  /** Dead Man's Watch absorbs one raid per run. This records that it has. */
+  raidShieldUsed: boolean
   /** Cumulative clean cash earned this run, drives the prestige payout. */
   cleanEarnedThisRun: Big
   startedAt: number
@@ -251,6 +253,22 @@ export interface GameState {
 }
 
 /** Aggregated buffs from gear, crew, and the connections tree. */
+export type DuffelTier = 'street' | 'safe' | 'armored'
+
+/** What a crate turned out to hold. */
+export interface OpenResult {
+  tier: DuffelTier
+  item: ItemDef
+  isNew: boolean
+  /** Level after the open. */
+  level: number
+  leveledUp: boolean
+  shards: number
+  shardsForNext: number
+  /** True when the slot was empty and this went straight on. */
+  autoEquipped: boolean
+}
+
 export interface Modifiers {
   yield: number
   purityFloor: number
@@ -259,6 +277,10 @@ export interface Modifiers {
   launderRate: number
   offlineCapHours: number
   duffelDropRate: number
+  /** Multiplier on every district's customer ceiling. */
+  demandMult: number
+  /** Unique effect ids from equipped Untouchables. */
+  uniques: Set<string>
 }
 
 /**
@@ -268,7 +290,7 @@ export interface Modifiers {
  * and are dropped on reload, which keeps them out of the save schema.
  */
 export type EventKind =
-  | 'raid' | 'badBatch' | 'bandUp' | 'bandDown'
+  | 'raid' | 'raidShielded' | 'badBatch' | 'bandUp' | 'bandDown'
   | 'crate' | 'churn' | 'bribe' | 'hoard'
 
 export interface EventDraft {

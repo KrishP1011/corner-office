@@ -5,6 +5,7 @@ import { ProductionPanel } from './ui/ProductionPanel'
 import { TerritoryPanel } from './ui/TerritoryPanel'
 import { FrontsPanel } from './ui/FrontsPanel'
 import { LawPanel } from './ui/LawPanel'
+import { KitPanel } from './ui/KitPanel'
 import { EventToast } from './ui/EventToast'
 import { PlacesPanel } from './ui/PlacesPanel'
 import { OfflineModal } from './ui/OfflineModal'
@@ -13,6 +14,7 @@ import { DevPanel } from './dev/DevPanel'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'production', label: 'Still' },
   { id: 'territory', label: 'Routes' },
+  { id: 'kit', label: 'Kit' },
   { id: 'law', label: 'Law' },
   { id: 'fronts', label: 'Wash' },
   { id: 'places', label: 'Places' },
@@ -34,6 +36,7 @@ export default function App() {
       <main className="flex-1 px-3 pb-24 pt-4">
         {tab === 'production' && <ProductionPanel />}
         {tab === 'territory' && <TerritoryPanel />}
+        {tab === 'kit' && <KitPanel />}
         {tab === 'law' && <LawPanel />}
         {tab === 'fronts' && <FrontsPanel />}
         {tab === 'places' && <PlacesPanel />}
@@ -61,6 +64,12 @@ export default function App() {
                 )}
                 {t.id === 'fronts' && g.overCap && (
                   <span className="absolute right-1/4 top-2 h-1.5 w-1.5 rounded-full bg-[var(--color-danger)]" />
+                )}
+                {t.id === 'kit' && (g.duffels.street + g.duffels.safe + g.duffels.armored) > 0 && (
+                  <span
+                    className="absolute right-1/4 top-2 h-1.5 w-1.5 rounded-full"
+                    style={{ background: 'var(--color-brass-400)' }}
+                  />
                 )}
                 {t.id === 'law' && (g.band.band === 'hot' || g.band.band === 'burned') && (
                   <span
