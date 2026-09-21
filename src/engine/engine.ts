@@ -22,6 +22,14 @@ const RARITY_ORDER: Rarity[] = ['street', 'solid', 'connected', 'made', 'untouch
 /** Any elapsed gap longer than this is treated as time away, not a hitch. */
 const OFFLINE_THRESHOLD_SECONDS = 10
 
+const TAB_NAMES: Record<string, string> = {
+  territory: 'Routes',
+  fronts: 'The wash',
+  law: 'The law',
+  kit: 'Your kit',
+  crew: 'The payroll',
+}
+
 const BAND_NAMES: Record<string, string> = {
   cold: 'Quiet',
   warm: 'Noticed',
@@ -149,6 +157,7 @@ export class Engine {
     }
     this.record(this.lastReport.events)
     this.refreshCrewRoster()
+    this.refreshTabs()
 
     this.sinceSave += elapsed
     if (this.sinceSave >= BALANCE.SAVE_INTERVAL_SECONDS) {
@@ -211,6 +220,8 @@ export class Engine {
         return `${crewName(d.subject)} talked. Everything they knew, the ${s.lawLabel.toLowerCase()} know now.`
       case 'unpaid':
         return `${crewName(d.subject)} did not get paid. People remember that.`
+      case 'tabOpened':
+        return `${TAB_NAMES[d.subject ?? ''] ?? 'A new screen'} is open to you now.`
       case 'crewAvailable':
         return `${crewName(d.subject)} will take your call now.`
       case 'blockLost':
@@ -600,6 +611,41 @@ export class Engine {
     this.mods = computeModifiers(this.state, this.content)
     this.notify()
     return true
+  }
+
+  // -- Screens ---------------------------------------------------------------
+
+  /**
+   * Reveal a screen once the thing it is for exists. Latched: a screen that
+   * has appeared never goes away again, so the navigation never shifts
+   * under someone mid-tap.
+   */
+  private refreshTabs(): void {
+    const run = this.state.run
+    const meta = this.state.meta
+    const open = (id: string) => {
+      if (!meta.tabsUnlocked.includes(id)) {
+        meta.tabsUnlocked.push(id)
+        this.record([{ kind: 'tabOpened', tone: 'good', subject: id }])
+      }
+    }
+
+    // Somewhere to sell it, as soon as anything is actually selling.
+    const selling = this.content.blocks.some((b) => (run.blocks[b.id]?.customers ?? 0) > 1)
+    if (selling) open('territory')
+
+    // Money to wash, once there is some to wash.
+    if (run.cleanCash.gt(ZERO) || run.dirtyCash.gt(big(400))) open('fronts')
+
+    // The law, once it is actually looking.
+    if (run.heat >= 15) open('law')
+
+    // The kit, once there is something to open.
+    const crates = meta.duffels.street + meta.duffels.safe + meta.duffels.armored
+    if (crates > 0 || Object.keys(meta.loadout).length > 0) open('kit')
+
+    // The payroll, once somebody will take the call.
+    if (meta.unlockedCrew.length > 0) open('crew')
   }
 
   // -- Tips ----------------------------------------------------------------

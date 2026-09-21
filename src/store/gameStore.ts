@@ -229,6 +229,7 @@ export interface Snapshot {
   retakeCost: Big
   contestedCount: number
   hintsSeen: string[]
+  tabsUnlocked: string[]
   connectionNodes: NodeView[]
   cleanEarnedThisRun: Big
   runAgeSeconds: number
@@ -476,6 +477,7 @@ function build(): Snapshot {
     bribesThisRun: run.bribesThisRun,
     events: engine.events.slice(0, 20),
     hintsSeen: state.meta.hintsSeen,
+    tabsUnlocked: state.meta.tabsUnlocked,
     connectionNodes: CONNECTION_NODES.map((node) => {
       const level = nodeLevel(state, node.id)
       const maxed = level >= node.maxLevel
@@ -572,16 +574,21 @@ interface UiState {
   tab: Tab
   devOpen: boolean
   buyAmount: BuyAmount
+  /** Which line the still is showing. One thing in focus, not six. */
+  selected: string | null
   setTab: (t: Tab) => void
   toggleDev: () => void
   setBuyAmount: (n: BuyAmount) => void
+  select: (id: string) => void
 }
 
 export const useUi = create<UiState>((set) => ({
   tab: 'production',
   devOpen: false,
   buyAmount: 1,
+  selected: null,
   setTab: (tab) => set({ tab }),
   toggleDev: () => set((s) => ({ devOpen: !s.devOpen })),
   setBuyAmount: (buyAmount) => set({ buyAmount }),
+  select: (selected) => set({ selected }),
 }))

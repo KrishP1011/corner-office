@@ -177,6 +177,9 @@ export function deserialize(json: string, content: ContentPack): GameState {
   state.meta.hintsSeen = Array.isArray(m.hintsSeen)
     ? m.hintsSeen.filter((h: unknown) => typeof h === 'string')
     : []
+  state.meta.tabsUnlocked = Array.isArray(m.tabsUnlocked) && m.tabsUnlocked.length
+    ? m.tabsUnlocked.filter((t: unknown) => typeof t === 'string')
+    : ['production']
   state.meta.connectionsSpent = isObject(m.connectionsSpent) ? m.connectionsSpent : {}
   state.meta.duffels = {
     street: clampNumber(m.duffels?.street, 0, Number.MAX_SAFE_INTEGER, 0),

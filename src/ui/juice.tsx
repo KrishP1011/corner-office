@@ -40,7 +40,16 @@ export function useSmoothed(target: Big, tau = 0.18): Big {
       if (gap.lt(threshold) || gap.lt(big(0.01))) {
         display.current = goal.current
       } else {
-        display.current = display.current.add(diff.mul(big(1 - Math.exp(-dt / tau))))
+        // A fixed time constant eases by a fixed FRACTION per frame, so the
+        // time to converge scales with the log of the gap -- a cash-out that
+        // drops billions to nothing would crawl for seconds. Large relative
+        // corrections get a much shorter constant.
+        const relative = goal.current.abs().gt(big(0))
+          ? gap.div(goal.current.abs()).toNumber()
+          : Infinity
+        const effectiveTau = relative > 10 ? tau * 0.12 : tau
+
+        display.current = display.current.add(diff.mul(big(1 - Math.exp(-dt / effectiveTau))))
       }
 
       bump((n) => (n + 1) % 1000)

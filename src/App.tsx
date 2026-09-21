@@ -57,7 +57,7 @@ export default function App() {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="mx-auto flex max-w-lg">
-          {TABS.map((t) => {
+          {TABS.filter((t) => g.tabsUnlocked.includes(t.id)).map((t) => {
             const active = tab === t.id
             return (
               <button

@@ -87,12 +87,14 @@ export function Intro() {
 export function Hints() {
   const g = useGame()
   const [showing, setShowing] = useState<string | null>(null)
+  const [readyAt, setReadyAt] = useState(0)
 
   const seen = (id: string) => g.hintsSeen.includes(id)
   const introDone = seen('intro')
 
   useEffect(() => {
-    if (!introDone || showing) return
+    // A breather between tips. Three in a row is a lecture, not a hand.
+    if (!introDone || showing || Date.now() < readyAt) return
 
     const pick = (): string | null => {
       if (!seen('heat') && g.heat >= 28) return 'heat'
@@ -105,7 +107,7 @@ export function Hints() {
     const next = pick()
     if (next) setShowing(next)
     // Re-checked on every publish; cheap, and the conditions are all reads.
-  }, [g, introDone, showing])
+  }, [g, introDone, showing, readyAt])
 
   if (!showing) return null
 
@@ -115,6 +117,7 @@ export function Hints() {
   const dismiss = () => {
     engine.markHint(showing)
     setShowing(null)
+    setReadyAt(Date.now() + 45_000)
   }
 
   return (

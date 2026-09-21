@@ -267,6 +267,12 @@ export interface MetaState {
   lifetimeCleanEarned: Big
   /** One-time tips already shown. Persisted so they never repeat. */
   hintsSeen: string[]
+  /**
+   * Screens revealed so far. Six tabs on the first second is a wall; they
+   * arrive as the thing they are for becomes real. Latched, so a screen
+   * never disappears once you have seen it.
+   */
+  tabsUnlocked: string[]
   /** Permanent 2x from the IAP. Local-only entitlement in v1. */
   purchased2x: boolean
 }
@@ -330,6 +336,7 @@ export type EventKind =
   | 'raid' | 'raidShielded' | 'badBatch' | 'bandUp' | 'bandDown'
   | 'crate' | 'churn' | 'bribe' | 'hoard'
   | 'snitch' | 'crewAvailable' | 'blockLost' | 'blockHeld' | 'unpaid'
+  | 'tabOpened'
 
 export interface EventDraft {
   kind: EventKind

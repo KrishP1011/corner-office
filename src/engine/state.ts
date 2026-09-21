@@ -87,6 +87,7 @@ export function freshMeta(): MetaState {
     autoRun: {},
     lifetimeCleanEarned: ZERO,
     hintsSeen: [],
+    tabsUnlocked: ['production'],
     purchased2x: false,
   }
 }
