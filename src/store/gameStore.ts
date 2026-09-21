@@ -4,13 +4,21 @@ import { Engine } from '../engine/engine'
 import { big, ZERO, type Big } from '../engine/bignum'
 import {
   heatBand, dirtyCap, launderPerMinute, yieldPerCycle,
-  customerCeiling, effectivePurity, blockAccepts,
+  customerCeiling, effectivePurity, blockAccepts, autoRunUnlocked,
 } from '../engine/economy'
+import { BALANCE } from '../engine/balance'
 import type {
   ThemeStrings, ProductDef, LocationDef, FrontDef, BlockDef, HeatBandInfo,
+  QualityBuff,
 } from '../engine/types'
 
 export const engine = new Engine()
+
+// Reachable from the browser console during development. Invaluable for
+// inspecting simulation state without threading debug UI through React.
+if (import.meta.env.DEV) {
+  ;(globalThis as unknown as Record<string, unknown>).__engine = engine
+}
 
 // ---------------------------------------------------------------------------
 // Snapshot
@@ -37,6 +45,12 @@ export interface ProductView {
   unlockCost: Big
   canUnlock: boolean
   blockedBySlots: boolean
+  buff: QualityBuff | null
+  /** Fraction of the bonus duration still to run, 0..1. */
+  buffPct: number
+  plays: number
+  autoUnlocked: boolean
+  autoOn: boolean
 }
 
 export interface BlockView {
@@ -100,7 +114,7 @@ function buildProducts(used: number, slots: number): ProductView[] {
 
   return content.products.map((def) => {
     const ps = run.products[def.id]
-    const perCycle = yieldPerCycle(def, ps.level, ps.purity, mods, state.meta.purchased2x)
+    const perCycle = yieldPerCycle(def, ps.level, ps.purity, mods, state.meta.purchased2x, ps.buff)
     const nextCost = engine.nextStationCost(def.id)
     const unlockCost = big(def.unlockCost)
     const locationOwned = run.ownedLocations.includes(def.requiresLocation)
@@ -110,7 +124,7 @@ function buildProducts(used: number, slots: number): ProductView[] {
       level: ps.level,
       unlocked: ps.unlocked,
       purity: ps.purity,
-      effPurity: effectivePurity(ps.purity, mods),
+      effPurity: effectivePurity(ps.purity, mods, ps.buff),
       inventory: ps.inventory,
       cyclePct: Math.min(100, (ps.cycleProgress / def.cycleSeconds) * 100),
       yieldPerCycle: perCycle,
@@ -122,6 +136,11 @@ function buildProducts(used: number, slots: number): ProductView[] {
       unlockCost,
       canUnlock: !ps.unlocked && locationOwned && run.cleanCash.gte(unlockCost),
       blockedBySlots: ps.level === 0 && used >= slots,
+      buff: ps.buff,
+      buffPct: ps.buff ? ps.buff.remaining / BALANCE.BUFF_DURATION_SECONDS : 0,
+      plays: state.meta.minigamePlays[def.id] ?? 0,
+      autoUnlocked: autoRunUnlocked(state, def.id),
+      autoOn: state.meta.autoRun[def.id] === true,
     }
   })
 }
@@ -138,7 +157,7 @@ function buildBlocks(): BlockView[] {
     for (const want of def.wants) {
       const ps = run.products[want]
       if (ps?.unlocked && ps.level > 0) {
-        worst = Math.min(worst, effectivePurity(ps.purity, mods))
+        worst = Math.min(worst, effectivePurity(ps.purity, mods, ps.buff))
       }
     }
     const supplied = Number.isFinite(worst)

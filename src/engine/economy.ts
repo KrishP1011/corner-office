@@ -1,8 +1,8 @@
 import { big, type Big, ZERO } from './bignum'
-import { BALANCE, milestoneMultiplier } from './balance'
+import { BALANCE, MINIGAME_REWARDS, milestoneMultiplier } from './balance'
 import type {
   ProductDef, BlockDef, ContentPack, GameState,
-  Modifiers, HeatBandInfo, StatKey,
+  Modifiers, HeatBandInfo, StatKey, QualityBuff,
 } from './types'
 
 // ---------------------------------------------------------------------------
@@ -61,8 +61,11 @@ export function computeModifiers(state: GameState, content: ContentPack): Modifi
  * number, which is the whole reason the Loadout matters: it lets you cut
  * harder than the market should tolerate.
  */
-export function effectivePurity(purity: number, mods: Modifiers): number {
-  return Math.min(BALANCE.PURITY_MAX, purity + mods.purityFloor)
+export function effectivePurity(
+  purity: number, mods: Modifiers, buff?: QualityBuff | null,
+): number {
+  const bonus = mods.purityFloor + (buff?.purityBonus ?? 0)
+  return Math.min(BALANCE.PURITY_MAX, purity + bonus)
 }
 
 /** Multiplier on unit count from cutting. Purity 25 yields 4x the units. */
@@ -86,11 +89,12 @@ export function yieldPerCycle(
   purity: number,
   mods: Modifiers,
   purchased2x: boolean,
+  buff?: QualityBuff | null,
 ): Big {
   if (level <= 0) return ZERO
   const base = def.baseYield * level * milestoneMultiplier(level)
   const cut = base * cutMultiplier(purity)
-  const buffed = cut * (1 + mods.yield) * (purchased2x ? 2 : 1)
+  const buffed = cut * (1 + mods.yield) * (purchased2x ? 2 : 1) * (buff?.yieldMult ?? 1)
   return big(buffed)
 }
 
@@ -183,10 +187,11 @@ export function heatBand(heat: number): HeatBandInfo {
 /** Heat produced by moving `units`, after the location and resistances. */
 export function heatFromUnits(
   units: Big, def: ProductDef, locationHeatMod: number, mods: Modifiers,
+  buff?: QualityBuff | null,
 ): number {
   const raw = units.toNumber() * def.heatPerUnit
   if (!Number.isFinite(raw)) return 0
-  return raw * (1 + locationHeatMod) * (1 - mods.heatResist)
+  return raw * (1 + locationHeatMod) * (1 - mods.heatResist) * (buff?.heatMult ?? 1)
 }
 
 /**
@@ -240,6 +245,32 @@ export function launderPerMinute(
     total = total.add(byRate.lt(cap) ? byRate : cap)
   }
   return total.mul(big(1 + mods.launderRate))
+}
+
+// ---------------------------------------------------------------------------
+// Minigames
+// ---------------------------------------------------------------------------
+
+/**
+ * Turn a 0..1 performance score into a buff. Never returns anything worse
+ * than neutral -- a botched run still leaves a sliver, so attempting a
+ * minigame can only ever help.
+ */
+export function buffFromScore(def: ProductDef, score: number): QualityBuff {
+  const clamped = Math.max(BALANCE.MIN_SCORE_FLOOR, Math.min(1, score))
+  const weights = MINIGAME_REWARDS[def.minigame]
+
+  return {
+    yieldMult: 1 + BALANCE.MAX_YIELD_BONUS * weights.yield * clamped,
+    purityBonus: Math.round(BALANCE.MAX_PURITY_BONUS * weights.purity * clamped),
+    heatMult: 1 - BALANCE.MAX_HEAT_REDUCTION * weights.heat * clamped,
+    remaining: BALANCE.BUFF_DURATION_SECONDS,
+  }
+}
+
+/** True once this product's minigame has been played enough to automate. */
+export function autoRunUnlocked(state: GameState, productId: string): boolean {
+  return (state.meta.minigamePlays[productId] ?? 0) >= BALANCE.AUTO_UNLOCK_PLAYS
 }
 
 // ---------------------------------------------------------------------------

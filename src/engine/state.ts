@@ -18,6 +18,7 @@ function freshProducts(content: ContentPack): Record<string, ProductState> {
       purity: BALANCE.PURITY_DEFAULT,
       inventory: ZERO,
       unlocked: i === 0,
+      buff: null,
     }
   })
   return out
@@ -62,6 +63,8 @@ export function freshMeta(): MetaState {
     duffels: { street: 0, safe: 0, armored: 0 },
     unlockedCrew: [],
     totalPrestiges: 0,
+    minigamePlays: {},
+    autoRun: {},
     lifetimeCleanEarned: ZERO,
     purchased2x: false,
   }

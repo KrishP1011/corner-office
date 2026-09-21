@@ -91,6 +91,9 @@ export function DevPanel() {
         <button className="btn px-2 py-1 text-[10px]" onClick={() => { engine.devGrantDuffels(5); say('+5 of each crate') }}>
           +5 crates
         </button>
+        <button className="btn px-2 py-1 text-[10px]" onClick={() => { engine.devUnlockAutoRun(); say('auto-run unlocked') }}>
+          auto-run
+        </button>
       </Group>
 
       <Group label="Save">

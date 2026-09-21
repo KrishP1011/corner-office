@@ -9,7 +9,11 @@
  */
 import { loadContent } from '../src/engine/content'
 import { createInitialState } from '../src/engine/state'
-import { computeModifiers, cutMultiplier, priceMultiplier, stationCost } from '../src/engine/economy'
+import {
+  computeModifiers, cutMultiplier, priceMultiplier, stationCost,
+  buffFromScore, autoRunUnlocked, customerCeiling,
+} from '../src/engine/economy'
+import { BALANCE } from '../src/engine/balance'
 import { runFor } from '../src/engine/tick'
 import { fmt, fmtMoney, big, type Big } from '../src/engine/bignum'
 import { serialize, deserialize } from '../src/engine/save'
@@ -120,6 +124,78 @@ for (const m of [5, 15, 30, 60]) {
 check('reckless volume eventually draws heat', hot.run.heat > 40, `heat=${hot.run.heat.toFixed(1)}`)
 
 // ---------------------------------------------------------------------------
+header('MINIGAMES')
+
+const beer = content.products.find((p) => p.id === 'beer')!
+const scotch = content.products.find((p) => p.id === 'scotch')!
+const gin = content.products.find((p) => p.id === 'gin')!
+
+const perfect = buffFromScore(beer, 1)
+const botched = buffFromScore(beer, 0)
+console.log(`  beer   perfect -> yield x${perfect.yieldMult.toFixed(2)}, botched -> x${botched.yieldMult.toFixed(2)}`)
+console.log(`  gin    perfect -> +${buffFromScore(gin, 1).purityBonus} proof`)
+console.log(`  scotch perfect -> heat x${buffFromScore(scotch, 1).heatMult.toFixed(2)}`)
+
+check('a perfect run pays the full yield ceiling',
+  Math.abs(perfect.yieldMult - (1 + BALANCE.MAX_YIELD_BONUS)) < 1e-9)
+check('a botched run is never worse than neutral',
+  botched.yieldMult >= 1 && botched.heatMult <= 1 && botched.purityBonus >= 0)
+check('each minigame buys something different',
+  buffFromScore(gin, 1).purityBonus > 0 &&
+  buffFromScore(scotch, 1).heatMult < 1 &&
+  buffFromScore(beer, 1).yieldMult > 1 &&
+  buffFromScore(gin, 1).yieldMult === 1)
+
+// Active play should be worth meaningfully more than leaving it running.
+//
+// Customers are seeded at their ceiling first. From a cold start the window
+// is dominated by customers ramping from zero, so sales are demand-limited
+// and extra production only becomes inventory -- which is real behaviour,
+// but not what this check is about.
+function revenueOver(seconds: number, withBuff: boolean): Big {
+  const s = createInitialState(content)
+  s.run.products['cider'].level = 60
+  s.run.products['beer'].unlocked = true
+  s.run.products['beer'].level = 40
+  if (withBuff) s.run.products['beer'].buff = buffFromScore(beer, 1)
+
+  for (const b of content.blocks) {
+    const bs = s.run.blocks[b.id]
+    if (bs.unlocked) bs.customers = customerCeiling(b, s)
+  }
+
+  const m = computeModifiers(s, content)
+  return runFor(s, content, m, seconds, false).revenue
+}
+const idle = revenueOver(240, false)
+const active = revenueOver(240, true)
+console.log(`  4 min idle=${fmtMoney(idle)}  buffed=${fmtMoney(active)}`)
+check('a bonus measurably raises income', active.gt(idle),
+  `${active.div(idle).toNumber().toFixed(2)}x`)
+
+// Buffs must expire.
+const decay = createInitialState(content)
+decay.run.products['cider'].buff = buffFromScore(beer, 1)
+const decayMods = computeModifiers(decay, content)
+runFor(decay, content, decayMods, BALANCE.BUFF_DURATION_SECONDS + 60, false)
+check('bonuses expire', decay.run.products['cider'].buff === null)
+
+// Auto-run gate.
+const auto = createInitialState(content)
+check('auto-run is locked before the play count', !autoRunUnlocked(auto, 'beer'))
+auto.meta.minigamePlays['beer'] = BALANCE.AUTO_UNLOCK_PLAYS
+check('auto-run unlocks at the play count', autoRunUnlocked(auto, 'beer'))
+
+auto.meta.autoRun['beer'] = true
+auto.run.products['beer'].unlocked = true
+auto.run.products['beer'].level = 10
+runFor(auto, content, computeModifiers(auto, content), 30, false)
+const held = auto.run.products['beer'].buff
+check('auto-run keeps a weaker bonus topped up',
+  held !== null && held.yieldMult > 1 && held.yieldMult < perfect.yieldMult,
+  held ? `x${held.yieldMult.toFixed(2)} vs perfect x${perfect.yieldMult.toFixed(2)}` : 'none')
+
+// ---------------------------------------------------------------------------
 header('OFFLINE (4h at level 50)')
 const s3 = createInitialState(content)
 s3.run.products['cider'].level = 50
@@ -137,6 +213,15 @@ check('huge values survive a round trip', back.run.cleanCash.toString() === s3.r
   back.run.cleanCash.toString())
 check('levels survive', back.run.products['cider'].level === 50)
 check('purity survives', back.run.products['cider'].purity === 37)
+
+s3.run.products['beer'].buff = buffFromScore(beer, 1)
+s3.meta.minigamePlays['beer'] = 12
+s3.meta.autoRun['beer'] = true
+const back2 = deserialize(serialize(s3), content)
+check('bonuses survive a round trip',
+  back2.run.products['beer'].buff?.yieldMult === s3.run.products['beer'].buff!.yieldMult)
+check('play counts and auto-run survive',
+  back2.meta.minigamePlays['beer'] === 12 && back2.meta.autoRun['beer'] === true)
 check('corrupt save does not throw', (() => {
   try { deserialize('{"schemaVersion":1,"run":{"dirtyCash":"garbage"}}', content); return true }
   catch { return false }

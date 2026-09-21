@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { engine, useGame, useUi, type ProductView, type BuyAmount } from '../store/gameStore'
-import { fmt, fmtMoney, fmtInt } from '../engine/bignum'
+import { fmt, fmtMoney, fmtInt, fmtDuration } from '../engine/bignum'
 import { cutMultiplier, priceMultiplier } from '../engine/economy'
 import { BALANCE, nextMilestone } from '../engine/balance'
 import { Meter, SectionTitle, Empty } from './bits'
+import { MinigameModal, describeBuff } from './minigames'
+import type { ProductDef } from '../engine/types'
 
 const AMOUNTS: { label: string; value: BuyAmount }[] = [
   { label: '1', value: 1 },
@@ -14,6 +17,7 @@ const AMOUNTS: { label: string; value: BuyAmount }[] = [
 export function ProductionPanel() {
   const g = useGame()
   const { buyAmount, setBuyAmount } = useUi()
+  const [openGame, setOpenGame] = useState<ProductDef | null>(null)
 
   const visible = g.products.filter((p) => p.unlocked || p.locationOwned)
   const locked = g.products.filter((p) => !p.unlocked && !p.locationOwned)
@@ -35,7 +39,13 @@ export function ProductionPanel() {
       </div>
 
       {visible.map((p) => (
-        <ProductCard key={p.def.id} p={p} buyAmount={buyAmount} market={marketFor(g, p)} />
+        <ProductCard
+          key={p.def.id}
+          p={p}
+          buyAmount={buyAmount}
+          market={marketFor(g, p)}
+          onPlay={() => setOpenGame(p.def)}
+        />
       ))}
 
       {locked.length > 0 && (
@@ -57,6 +67,8 @@ export function ProductionPanel() {
       )}
 
       {visible.length === 0 && <Empty>Nothing to run here yet.</Empty>}
+
+      {openGame && <MinigameModal def={openGame} onClose={() => setOpenGame(null)} />}
     </div>
   )
 }
@@ -86,8 +98,8 @@ function marketFor(g: ReturnType<typeof useGame>, p: ProductView): Market {
 }
 
 function ProductCard({
-  p, buyAmount, market,
-}: { p: ProductView; buyAmount: BuyAmount; market: Market }) {
+  p, buyAmount, market, onPlay,
+}: { p: ProductView; buyAmount: BuyAmount; market: Market; onPlay: () => void }) {
   const g = useGame()
 
   if (!p.unlocked) {
@@ -206,6 +218,48 @@ function ProductCard({
           {buyLabel} · {fmtMoney(buyCost)}
         </button>
       </div>
+
+      {p.def.minigame !== 'none' && p.level > 0 && (
+        <div className="mt-3 border-t border-[var(--color-ink-600)] pt-3">
+          {p.buff ? (
+            <div className="mb-2">
+              <div className="mb-1 flex items-baseline justify-between gap-2">
+                <span className="tnum text-brass-400 text-[11px]">
+                  {describeBuff(p.buff).join(' · ')}
+                </span>
+                <span className="tnum text-cream-dim text-[10px]">
+                  {fmtDuration(p.buff.remaining)} left
+                </span>
+              </div>
+              <Meter pct={p.buffPct * 100} tone="ok" />
+            </div>
+          ) : (
+            <div className="text-cream-dim mb-2 text-[11px]">
+              No batch bonus running.
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button className="btn flex-1" onClick={onPlay}>
+              {p.buff ? 'Run it again' : 'Work the batch'}
+            </button>
+
+            {p.autoUnlocked ? (
+              <button
+                className={`btn px-3 ${p.autoOn ? 'btn-brass' : 'btn-ghost'}`}
+                onClick={() => engine.toggleAutoRun(p.def.id)}
+                title="Keep a weaker bonus topped up automatically"
+              >
+                AUTO
+              </button>
+            ) : (
+              <span className="text-cream-dim tnum shrink-0 text-[10px]">
+                {p.plays}/{BALANCE.AUTO_UNLOCK_PLAYS} to auto
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

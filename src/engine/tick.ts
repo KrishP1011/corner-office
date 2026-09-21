@@ -3,7 +3,7 @@ import { BALANCE } from './balance'
 import {
   yieldPerCycle, effectivePurity, unitPrice, customerCeiling,
   blockAccepts, isBadBatch, heatBand, heatFromUnits,
-  dirtyCap, launderPerMinute,
+  dirtyCap, launderPerMinute, buffFromScore, autoRunUnlocked,
 } from './economy'
 import type {
   ContentPack, GameState, Modifiers, StepReport, ProductDef,
@@ -47,6 +47,25 @@ export function step(
   const locationHeatMod = location?.heatMod ?? 0
   const band = heatBand(run.heat)
 
+  // -- 0. Minigame bonuses -------------------------------------------------
+  for (const def of content.products) {
+    const ps = run.products[def.id]
+    if (!ps) continue
+
+    if (ps.buff) {
+      ps.buff.remaining -= dt
+      if (ps.buff.remaining <= 0) ps.buff = null
+    }
+
+    // Auto-run keeps a weaker bonus topped up so long grinds are optional.
+    if (state.meta.autoRun[def.id] && autoRunUnlocked(state, def.id)) {
+      const auto = buffFromScore(def, BALANCE.AUTO_STRENGTH)
+      if (!ps.buff || ps.buff.yieldMult < auto.yieldMult || ps.buff.remaining < auto.remaining / 2) {
+        ps.buff = auto
+      }
+    }
+  }
+
   // -- 1. Production -------------------------------------------------------
   const productsById = new Map(content.products.map((p) => [p.id, p]))
 
@@ -59,7 +78,7 @@ export function step(
     if (cycles <= 0) continue
 
     ps.cycleProgress -= cycles * def.cycleSeconds
-    const perCycle = yieldPerCycle(def, ps.level, ps.purity, mods, state.meta.purchased2x)
+    const perCycle = yieldPerCycle(def, ps.level, ps.purity, mods, state.meta.purchased2x, ps.buff)
     ps.inventory = ps.inventory.add(perCycle.mul(big(cycles)))
 
     // Crates fall out of production, not out of sales -- a player who is
@@ -97,7 +116,8 @@ export function step(
     // A district's opinion is set by the worst thing you are selling it.
     let worstEff = Infinity
     for (const pdef of live) {
-      worstEff = Math.min(worstEff, effectivePurity(run.products[pdef.id].purity, mods))
+      const ps = run.products[pdef.id]
+      worstEff = Math.min(worstEff, effectivePurity(ps.purity, mods, ps.buff))
     }
 
     const ceiling = customerCeiling(bdef, state)
@@ -123,7 +143,7 @@ export function step(
 
       ps.inventory = ps.inventory.sub(sold)
 
-      const eff = effectivePurity(ps.purity, mods)
+      const eff = effectivePurity(ps.purity, mods, ps.buff)
       const gross = sold.mul(unitPrice(pdef, eff, bdef, mods))
       const net = gross.mul(big(1 - band.salesPenalty))
 
@@ -131,7 +151,7 @@ export function step(
       report.revenue = report.revenue.add(net)
       report.unitsSold = report.unitsSold.add(sold)
 
-      let h = heatFromUnits(sold, pdef, locationHeatMod, mods)
+      let h = heatFromUnits(sold, pdef, locationHeatMod, mods, ps.buff)
       if (isBadBatch(bdef, eff)) h *= BALANCE.BAD_BATCH_HEAT_MULT
       heatGained += h
     }

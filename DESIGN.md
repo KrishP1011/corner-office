@@ -545,6 +545,58 @@ tier. Shipped values run 8s to 90s, with base yields raised to keep the
 income curve. Fifteen minutes is fine for idle and miserable for active play,
 and this game wants to be played actively.
 
+### Part 2 — the minigames
+
+Shipped: the quality-bonus system, five minigames, the auto-run valve, and
+harness coverage for all of it.
+
+**Bonuses, not batches.** Section 3 implied a minigame per production cycle,
+but tier-one cycles are eight seconds long, so that would be constant
+interruption. A run instead grants a timed bonus (five minutes) that applies
+to everything the line produces. Idle play keeps running untouched; active
+play layers a bonus on top. That is what makes active worth ~3x idle without
+making idle feel punished.
+
+**Each minigame buys something different**, so each is worth learning rather
+than being five skins on one reward:
+
+| Product | Game | Verb | Pays |
+|---|---|---|---|
+| Homebrew Beer | Mind the mash | precision dragging | +40% output |
+| Moonshine | Wild yeast | reaction tapping | +40% output |
+| Bathtub Gin | Cut the heads | rhythm | +15 proof |
+| Smuggled Scotch | The run in | dodging | -35% suspicion |
+| Everclear | Hold the column | sustained control | +15 proof, +20% output |
+
+Proof bonuses interact directly with the cut: a good run on gin lifted
+effective proof from 50 to 64, which took it from serving one district to
+serving all four. The minigames feed the core decision rather than sitting
+beside it.
+
+**A failed run is never worse than skipping one.** Scores floor at 0.1, so
+the worst outcome is a small bonus. The minigames are upside for attention,
+never a tax on leaving the game running.
+
+**Auto-run** unlocks per product after 50 completions and holds 50% of a
+perfect result. Section 18.4 flagged minigame fatigue as the least certain
+risk in the design; this is the valve. Active play stays strictly better,
+and the grind becomes optional.
+
+### Bugs found and fixed in Part 2
+
+1. **Side effects inside `setState` updaters.** All five games mutated state
+   from inside updater functions, calling other setters and spawning
+   entities there. React invokes updaters twice under StrictMode and may
+   call them again under concurrent rendering, so one completed game counted
+   as two plays, and the balance game's completion fired a store update
+   *during render* ("Cannot update a component while rendering a different
+   component"). Rewritten so simulation state lives in a ref and React is
+   only asked to paint -- see `useGameState` in `ui/minigames/shell.tsx`.
+2. **The contamination game was unwinnable.** Every maturing spore seeded a
+   replacement, so the population grew exponentially and the board was lost
+   within six seconds. Capped live spores at 8 and slowed maturity. Pressure
+   should build, not detonate.
+
 ### Balance problems found and fixed in Part 1
 
 Four of these only surfaced by running the engine headlessly, which is the

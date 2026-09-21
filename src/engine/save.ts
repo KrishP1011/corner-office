@@ -122,6 +122,17 @@ export function deserialize(json: string, content: ContentPack): GameState {
     target.purity = clampNumber(saved.purity, BALANCE.PURITY_MIN, BALANCE.PURITY_MAX, BALANCE.PURITY_DEFAULT)
     target.inventory = bigFromJSON(saved.inventory)
     target.unlocked = saved.unlocked === true || target.unlocked
+
+    // A bonus that outlived its definition is dropped rather than trusted.
+    const b = saved.buff
+    if (isObject(b) && typeof b.remaining === 'number' && b.remaining > 0) {
+      target.buff = {
+        yieldMult: clampNumber(b.yieldMult, 1, 10, 1),
+        purityBonus: clampNumber(b.purityBonus, 0, BALANCE.MAX_PURITY_BONUS, 0),
+        heatMult: clampNumber(b.heatMult, 0.1, 1, 1),
+        remaining: clampNumber(b.remaining, 0, BALANCE.BUFF_DURATION_SECONDS, 0),
+      }
+    }
   }
 
   // Districts: same treatment.
@@ -145,6 +156,22 @@ export function deserialize(json: string, content: ContentPack): GameState {
     safe: clampNumber(m.duffels?.safe, 0, Number.MAX_SAFE_INTEGER, 0),
     armored: clampNumber(m.duffels?.armored, 0, Number.MAX_SAFE_INTEGER, 0),
   }
+  state.meta.minigamePlays = {}
+  if (isObject(m.minigamePlays)) {
+    for (const def of content.products) {
+      const n = clampNumber((m.minigamePlays as Record<string, unknown>)[def.id], 0, Number.MAX_SAFE_INTEGER, 0)
+      if (n > 0) state.meta.minigamePlays[def.id] = n
+    }
+  }
+  state.meta.autoRun = {}
+  if (isObject(m.autoRun)) {
+    for (const def of content.products) {
+      if ((m.autoRun as Record<string, unknown>)[def.id] === true) {
+        state.meta.autoRun[def.id] = true
+      }
+    }
+  }
+
   state.meta.unlockedCrew = Array.isArray(m.unlockedCrew)
     ? m.unlockedCrew.filter((id: unknown) => content.crew.some((c) => c.id === id))
     : []

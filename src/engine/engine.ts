@@ -4,6 +4,7 @@ import { loadContent, DEFAULT_THEME } from './content'
 import {
   computeModifiers, stationCost, stationCostBulk, affordableLevels,
   canPrestige, prestigePayout, prestigeRequirement,
+  buffFromScore, autoRunUnlocked,
 } from './economy'
 import { createInitialState, applyPrestige, refreshBlockUnlocks } from './state'
 import { runFor, cappedOfflineSeconds } from './tick'
@@ -238,6 +239,41 @@ export class Engine {
     return true
   }
 
+  /**
+   * Record a finished minigame. `score` is 0..1; anything at or below the
+   * floor still grants a sliver, so a bad run is never worse than skipping.
+   */
+  completeMinigame(productId: string, score: number): boolean {
+    const def = this.content.products.find((p) => p.id === productId)
+    const ps = this.state.run.products[productId]
+    if (!def || !ps || !ps.unlocked || def.minigame === 'none') return false
+
+    const earned = buffFromScore(def, score)
+
+    // Never downgrade a bonus the player already has running.
+    if (!ps.buff || earned.yieldMult >= ps.buff.yieldMult) {
+      ps.buff = earned
+    } else {
+      ps.buff.remaining = Math.max(ps.buff.remaining, earned.remaining)
+    }
+
+    this.state.meta.minigamePlays[productId] =
+      (this.state.meta.minigamePlays[productId] ?? 0) + 1
+
+    this.save()
+    this.notify()
+    return true
+  }
+
+  toggleAutoRun(productId: string): boolean {
+    if (!autoRunUnlocked(this.state, productId)) return false
+    const on = this.state.meta.autoRun[productId] === true
+    if (on) delete this.state.meta.autoRun[productId]
+    else this.state.meta.autoRun[productId] = true
+    this.notify()
+    return true
+  }
+
   equip(slot: ItemSlot, defId: string | null): boolean {
     if (defId === null) {
       delete this.state.meta.equipped[slot]
@@ -355,6 +391,13 @@ export class Engine {
     }
     refreshBlockUnlocks(this.state, this.content)
     this.mods = computeModifiers(this.state, this.content)
+    this.notify()
+  }
+
+  devUnlockAutoRun(): void {
+    for (const p of this.content.products) {
+      this.state.meta.minigamePlays[p.id] = BALANCE.AUTO_UNLOCK_PLAYS
+    }
     this.notify()
   }
 

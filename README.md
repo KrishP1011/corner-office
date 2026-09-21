@@ -101,9 +101,27 @@ throws with a list of problems rather than failing quietly at runtime.
 
 ---
 
+## Minigames
+
+Each product above cider has its own minigame, and each buys something
+different -- output, proof, or quiet -- so each is worth learning. A run
+grants a five-minute bonus that applies to everything the line produces,
+which is what makes active play worth roughly 3x idle without making idle
+feel punished. A failed run still leaves a sliver, so attempting one is
+never worse than skipping it.
+
+After 50 completions a product's **auto-run** toggle unlocks and holds half
+a perfect result indefinitely. Active play stays better; the grind is
+optional.
+
+Simulation state inside a minigame lives in a ref (`useGameState`), not in
+`useState`. React invokes state updaters more than once under StrictMode and
+concurrent rendering, so anything with a side effect in an updater
+double-counts.
+
 ## Status
 
-Part 1 of a seven-part build. Engine, economy, save system, content
-pipeline, dev tooling, and the production / territory / fronts / locations
-screens are in. Still to come: the production minigames, the Loadout and
-crates, crew, the territory map proper, prestige UI, and the juice pass.
+Parts 1-2 of a seven-part build. Engine, economy, save system, content
+pipeline, dev tooling, the five minigames, and the production / territory /
+fronts / locations screens are in. Still to come: the Loadout and crates,
+crew, the territory map proper, prestige UI, and the juice pass.

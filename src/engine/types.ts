@@ -142,6 +142,24 @@ export interface ContentPack {
 // Runtime state
 // ---------------------------------------------------------------------------
 
+/**
+ * A temporary bonus earned by playing a product's minigame.
+ *
+ * Deliberately upside-only: failing a minigame gives a weak buff, never a
+ * penalty. The minigames are what makes active play worth ~3x idle, not a
+ * tax on leaving the game running.
+ */
+export interface QualityBuff {
+  /** Multiplier on units produced. 1.0 = no effect. */
+  yieldMult: number
+  /** Points added to perceived purity, on top of gear. */
+  purityBonus: number
+  /** Multiplier on heat generated. 1.0 = no effect, 0.65 = a third less. */
+  heatMult: number
+  /** Seconds left. Counts down every step. */
+  remaining: number
+}
+
 export interface ProductState {
   /** 0 means the line has not been built yet. */
   level: number
@@ -151,6 +169,8 @@ export interface ProductState {
   purity: number
   inventory: Big
   unlocked: boolean
+  /** null when no minigame bonus is active. */
+  buff: QualityBuff | null
 }
 
 export interface BlockState {
@@ -201,6 +221,10 @@ export interface MetaState {
   duffels: { street: number; safe: number; armored: number }
   unlockedCrew: string[]
   totalPrestiges: number
+  /** Lifetime minigame completions per product; gates the auto-run toggle. */
+  minigamePlays: Record<string, number>
+  /** Per product: keep a weaker buff topped up automatically. */
+  autoRun: Record<string, boolean>
   lifetimeCleanEarned: Big
   /** Permanent 2x from the IAP. Local-only entitlement in v1. */
   purchased2x: boolean

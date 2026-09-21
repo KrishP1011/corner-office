@@ -42,6 +42,23 @@ export const BALANCE = {
   /** Heat multiplier while a district is being sold poison. */
   BAD_BATCH_HEAT_MULT: 3,
 
+  // -- Minigames -----------------------------------------------------------
+  /** How long a earned bonus lasts. Long enough that one run covers a session. */
+  BUFF_DURATION_SECONDS: 300,
+  /** Completions before a product's auto-run toggle unlocks. */
+  AUTO_UNLOCK_PLAYS: 50,
+  /**
+   * Auto-run holds this fraction of a perfect result. Below 1 on purpose:
+   * grinding the minigames becomes optional without making playing them
+   * pointless.
+   */
+  AUTO_STRENGTH: 0.5,
+  MAX_YIELD_BONUS: 0.40,
+  MAX_PURITY_BONUS: 15,
+  MAX_HEAT_REDUCTION: 0.35,
+  /** Even a failed run leaves something, so trying is never worse than not. */
+  MIN_SCORE_FLOOR: 0.1,
+
   // -- Heat ----------------------------------------------------------------
   HEAT_MAX: 100,
   HEAT_DECAY_PER_MIN: 0.8,
@@ -114,6 +131,20 @@ export const BALANCE = {
   SAVE_INTERVAL_SECONDS: 10,
   /** A single step is never longer than this, so integration stays stable. */
   MAX_STEP_SECONDS: 60,
+} as const
+
+/**
+ * What each minigame pays out, as a fraction of the MAX_* ceilings above.
+ * Different games buy different things so that each one is worth learning:
+ * a clean smuggling route quiets the law, a steady still sharpens the proof.
+ */
+export const MINIGAME_REWARDS = {
+  none:          { yield: 0,   purity: 0,   heat: 0 },
+  balance:       { yield: 1,   purity: 0,   heat: 0 },
+  contamination: { yield: 1,   purity: 0,   heat: 0 },
+  timing:        { yield: 0,   purity: 1,   heat: 0 },
+  route:         { yield: 0,   purity: 0,   heat: 1 },
+  stability:     { yield: 0.5, purity: 1,   heat: 0 },
 } as const
 
 /** Output multiplier from milestone doublings at or below `level`. */
