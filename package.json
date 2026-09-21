@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "package": "npm run build && cd dist && zip -r -q ../moonshine-run-web.zip . && cd .. && echo \"\\nmoonshine-run-web.zip ready -- upload to itch.io as an HTML5 game, tick 'This file will be played in the browser'\""
+    "package": "npm run build && rm -f moonshine-run-web.zip && cd dist && zip -r -q ../moonshine-run-web.zip . && cd .. && echo \"\\nmoonshine-run-web.zip ready -- upload to itch.io as an HTML5 game, tick 'This file will be played in the browser'\""
   },
   "dependencies": {
     "break_infinity.js": "^2.2.0",

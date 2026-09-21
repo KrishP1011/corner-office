@@ -20,6 +20,8 @@ export function emptyModifiers(): Modifiers {
     offlineCapHours: BALANCE.OFFLINE_CAP_HOURS_BASE,
     duffelDropRate: 0,
     demandMult: 1,
+    heatSpread: 1,
+    yieldMult: 1,
     defense: 0,
     raidShield: 0,
     uniques: new Set<string>(),
@@ -76,11 +78,24 @@ export function computeModifiers(state: GameState, content: ContentPack): Modifi
     const level = state.meta.connectionsSpent[node.id] ?? 0
     if (level <= 0) continue
 
+    if (node.multiplicative) {
+      mods.yieldMult *= Math.pow(1 + node.perLevel, level)
+      continue
+    }
+
     const value = node.perLevel * level
     if (node.stat === 'offlineCap') mods.offlineCapHours += value
     else if (node.stat === 'duffelDropRate') mods.duffelDropRate += value
     else mods[node.stat] += value
   }
+
+  // Volume spread across more hands draws less attention per unit.
+  let dealers = 0
+  for (const b of content.blocks) {
+    const bs = state.run.blocks[b.id]
+    if (bs?.unlocked && !bs.contested) dealers += bs.dealers
+  }
+  mods.heatSpread = 1 + dealers * BALANCE.DEALER_HEAT_SPREAD
 
   // Uniques that are simply a number resolve here; the rest are applied at
   // the point in the simulation where they actually mean something.
@@ -211,7 +226,8 @@ export function yieldPerCycle(
   if (level <= 0) return ZERO
   const base = def.baseYield * level * milestoneMultiplier(level)
   const cut = base * cutMultiplier(purity)
-  const buffed = cut * (1 + mods.yield) * (purchased2x ? 2 : 1) * (buff?.yieldMult ?? 1)
+  const buffed = cut * (1 + mods.yield) * mods.yieldMult
+    * (purchased2x ? 2 : 1) * (buff?.yieldMult ?? 1)
   return big(buffed)
 }
 
@@ -303,13 +319,39 @@ export function heatBand(heat: number): HeatBandInfo {
 }
 
 /** Heat produced by moving `units`, after the location and resistances. */
-export function heatFromUnits(
-  units: Big, def: ProductDef, locationHeatMod: number, mods: Modifiers,
+/**
+ * Suspicion generated per minute by one line that is currently moving
+ * product.
+ *
+ * Driven by how thin you are cutting and how dangerous the goods are, with
+ * volume counted logarithmically so it never runs away from the player's
+ * ability to suppress it. `heatPerUnit` in the content is read as a
+ * per-minute base for the tier.
+ */
+export function heatRatePerMinute(
+  def: ProductDef,
+  unitsPerSecond: number,
+  effPurity: number,
+  locationHeatMod: number,
+  mods: Modifiers,
   buff?: QualityBuff | null,
 ): number {
-  const raw = units.toNumber() * def.heatPerUnit
-  if (!Number.isFinite(raw)) return 0
-  return raw * (1 + locationHeatMod) * (1 - mods.heatResist) * (buff?.heatMult ?? 1)
+  if (!(unitsPerSecond > 0)) return 0
+
+  // Centred on the default cut, so selling honestly is a discount and
+  // watering down is a penalty, rather than everything being a penalty
+  // measured against an unreachable ideal.
+  const severity = Math.pow(BALANCE.PRICE_PIVOT / Math.max(1, effPurity), BALANCE.HEAT_CUT_EXPONENT)
+  const volume = 1 + BALANCE.HEAT_VOLUME_WEIGHT * Math.log10(1 + unitsPerSecond)
+
+  const rate = def.heatPerMinute
+    * severity * volume
+    * (1 + locationHeatMod)
+    * (1 - mods.heatResist)
+    * (buff?.heatMult ?? 1)
+    / mods.heatSpread
+
+  return Number.isFinite(rate) ? rate : 0
 }
 
 /**

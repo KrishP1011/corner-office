@@ -597,6 +597,64 @@ and the grind becomes optional.
    within six seconds. Capped live spores at 8 and slowed maturity. Pressure
    should build, not detonate.
 
+### Part 8 — suspicion, prestige pacing, and the numbers
+
+The three things Part 7 shipped knowing they were not finished.
+
+**Suspicion is now a rate, not a toll on every unit.** Charged per unit,
+generation scaled with the size of the operation while every means of
+suppressing it was bounded, so from mid-game onward it pinned at maximum and
+stopped being a dial at all. It is now a per-minute rate per line, driven by
+**how thin you are cutting** and which tiers you run, with volume counted
+logarithmically so a hundredfold operation is about three times as visible
+rather than a hundred times.
+
+This is the same lesson as the laundering bug in Part 6, in a different
+costume: what draws the law is recklessness, not the size of a well-run
+business, and anything that scales with the operation needs a suppressor
+that scales too.
+
+The first attempt at a fix was wrong in direction. Dividing the *per-unit*
+cost by the number of dealers made suspicion worse, not better, because
+dealers multiply throughput linearly while the divisor grows sub-linearly.
+Dividing a *rate* works.
+
+Severity is centred on the default cut rather than on perfect proof, so
+selling honestly is a discount and watering down is a penalty. Before that,
+everything was a penalty measured against an unreachable ideal, and honest
+play at mid-game came out hotter than watering down — because cutting made
+districts refuse, which reduced the number of lines actually selling.
+
+`tools/heatcheck.ts` exists so this cannot drift again. It asserts the
+properties that make suspicion a dial: cutting thinner always costs quiet,
+investment always buys it back, an honest invested operation is not hunted,
+recklessness is still punished, and suspicion is never simply absent.
+
+**Prestige pacing.** The requirement rose faster than connections actually
+compound. Node costs are exponential, so a node's value grows only
+logarithmically in connections spent — which is why the tail kept stalling
+however the requirement was tuned. Two changes: the uncapped node now
+multiplies rather than adds, and the requirement grows 2.2x rather than 4x,
+a figure arrived at by sweeping and measuring.
+
+| Requirement growth | Run lengths |
+|---|---|
+| 12x (Part 5) | 1h49, 2h13, 4h04, 9h46, stall |
+| 4x (Part 6) | 1h45, 2h17, 1h54, 3h46, 10h07, 14h04 |
+| **2.2x** | 1h44, 1h35, 2h05, 2h03, 2h17, 2h38, 4h05, 5h54, 6h33 |
+
+Nine runs inside three days, with the first six under 2h40m.
+
+**The numbers.** Roughly three significant figures everywhere, trailing
+zeros always trimmed: `$17` not `$16.8`, `$1.5M` not `$1.50M`, `2x` not
+`2.00x`, `123M` not `123.00M`. A screen full of dead zeros reads as noise.
+Added `fmtMult` and `fmtRate` so multipliers and per-minute figures are
+formatted in one place rather than at each call site.
+
+Also fixed: the money figure flinched red on every drop, including the
+constant small drain of payroll and laundering, so it sat permanently red
+and the signal meant nothing. It now reacts only to a drop worth noticing.
+
 ### Part 7 — the juice pass, and shipping
 
 Shipped: sound, flowing counters, floaters, the figure, first-run

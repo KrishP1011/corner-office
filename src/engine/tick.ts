@@ -2,9 +2,9 @@ import { big, type Big, ZERO } from './bignum'
 import { BALANCE } from './balance'
 import {
   yieldPerCycle, effectivePurity, unitPrice, customerCeiling,
-  blockAccepts, isBadBatch, heatBand, heatFromUnits,
+  blockAccepts, isBadBatch, heatBand,
   dirtyCap, launderPerMinute, buffFromScore, autoRunUnlocked,
-  crewWage, blockValue, blockDefense,
+  crewWage, blockValue, blockDefense, heatRatePerMinute,
 } from './economy'
 import type {
   ContentPack, GameState, Modifiers, StepReport, ProductDef,
@@ -107,6 +107,7 @@ export function step(
   let heatGained = 0
   const badBatches = new Set<string>()
   const unpaid = new Set<string>()
+  const soldPerProduct = new Map<string, Big>()
 
   // Nothing Personal: whichever district is carrying you does not churn.
   let protectedBlock: string | null = null
@@ -218,14 +219,8 @@ export function step(
       report.revenue = report.revenue.add(net)
       report.unitsSold = report.unitsSold.add(sold)
 
-      let h = heatFromUnits(sold, pdef, locationHeatMod, mods, ps.buff)
-      if (isBadBatch(bdef, eff)) {
-        h *= BALANCE.BAD_BATCH_HEAT_MULT
-        badBatches.add(pdef.id)
-      }
-      heatGained += h
-
-      report.heatByProduct[pdef.id] = (report.heatByProduct[pdef.id] ?? 0) + h
+      if (isBadBatch(bdef, eff)) badBatches.add(pdef.id)
+      soldPerProduct.set(pdef.id, (soldPerProduct.get(pdef.id) ?? ZERO).add(sold))
       report.unitsByProduct[pdef.id] = (report.unitsByProduct[pdef.id] ?? ZERO).add(sold)
     }
   }
@@ -288,6 +283,22 @@ export function step(
     if (Number.isFinite(over)) {
       heatGained += over * BALANCE.HOARD_HEAT_PER_MIN * (dt / 60)
     }
+  }
+
+  // Suspicion accrues per line as a rate, once, rather than per sale.
+  for (const [id, sold] of soldPerProduct) {
+    const pdef = productsById.get(id)
+    const ps = run.products[id]
+    if (!pdef || !ps) continue
+
+    const perSecond = sold.div(big(dt)).toNumber()
+    const eff = effectivePurity(ps.purity, mods, ps.buff)
+    let perMin = heatRatePerMinute(pdef, perSecond, eff, locationHeatMod, mods, ps.buff)
+    if (badBatches.has(id)) perMin *= BALANCE.BAD_BATCH_HEAT_MULT
+
+    const gained = perMin * (dt / 60)
+    heatGained += gained
+    report.heatByProduct[id] = (report.heatByProduct[id] ?? 0) + gained
   }
 
   // Nobody's Jacket: under 40 you simply do not register.

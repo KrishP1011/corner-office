@@ -17,6 +17,12 @@ export interface ConnectionNode {
   /** Modifier this node feeds, if any. Head starts are handled separately. */
   stat?: StatKey | 'duffelDropRate'
   perLevel?: number
+  /**
+   * Multiplies rather than adds. An additive bonus grows linearly in levels
+   * while levels cost exponentially, so its value grows logarithmically in
+   * connections -- which is why later runs stopped keeping pace.
+   */
+  multiplicative?: boolean
 }
 
 export const CONNECTION_NODES: ConnectionNode[] = [
@@ -30,8 +36,8 @@ export const CONNECTION_NODES: ConnectionNode[] = [
     id: 'name',
     name: 'The name',
     what: 'People know it. Everything you run is worth more.',
-    maxLevel: 999, baseCost: 6, costGrowth: 1.28,
-    stat: 'yield', perLevel: 0.08,
+    maxLevel: 999, baseCost: 5, costGrowth: 1.22,
+    stat: 'yield', perLevel: 0.11, multiplicative: true,
   },
   {
     id: 'craft',

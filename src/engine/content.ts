@@ -55,6 +55,7 @@ function validate(pack: ContentPack): void {
       errors.push(`product "${p.id}" requires unknown location "${p.requiresLocation}"`)
     }
     if (p.cycleSeconds <= 0) errors.push(`product "${p.id}" has a non-positive cycle`)
+    if (!(p.heatPerMinute >= 0)) errors.push(`product "${p.id}" has no heatPerMinute`)
     if (p.costGrowth <= 1) errors.push(`product "${p.id}" has costGrowth <= 1`)
   }
 

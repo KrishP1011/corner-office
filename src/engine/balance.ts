@@ -109,7 +109,7 @@ export const BALANCE = {
 
   // -- Heat ----------------------------------------------------------------
   HEAT_MAX: 100,
-  HEAT_DECAY_PER_MIN: 0.8,
+  HEAT_DECAY_PER_MIN: 0.9,
   HEAT_DECAY_PER_MIN_OFFLINE: 0.2,
   HEAT_BANDS: {
     warm: 30,
@@ -159,7 +159,31 @@ export const BALANCE = {
   /** Floor for the opening minutes, before any income has been recorded. */
   BASE_LAUNDER_FLOOR_PER_MIN: 60,
   /** Each owned front also explains your presence, and cools things down. */
-  FRONT_HEAT_DECAY_BONUS: 0.5,
+  FRONT_HEAT_DECAY_BONUS: 0.6,
+  /**
+   * Each dealer divides the attention a line draws.
+   *
+   * Note this is applied to a RATE, not to a per-unit cost. Dividing a
+   * per-unit cost does not work: dealers multiply throughput linearly while
+   * the divisor only grows sub-linearly, so adding dealers made suspicion
+   * worse rather than better.
+   */
+  DEALER_HEAT_SPREAD: 0.06,
+
+  /**
+   * Suspicion is a RATE, not a toll on every unit.
+   *
+   * Charged per unit, generation scaled with the operation while every means
+   * of suppressing it was bounded, so from mid-game onward it simply pinned
+   * at maximum and stopped being a dial. What draws the law is recklessness
+   * -- thin product, dangerous goods -- not the size of a well-run business.
+   *
+   * Volume still counts, but logarithmically, so a hundredfold operation is
+   * about three times as visible rather than a hundred times.
+   */
+  HEAT_VOLUME_WEIGHT: 0.22,
+  /** How much harder cutting bites. Proof 20 is five times proof 100. */
+  HEAT_CUT_EXPONENT: 1.7,
 
   // -- Bribes --------------------------------------------------------------
   /**
@@ -201,11 +225,16 @@ export const BALANCE = {
   // -- Prestige ------------------------------------------------------------
   PRESTIGE_BASE_REQUIREMENT: 100_000_000,
   /**
-   * Kept near the rate at which Connections actually compound (~3x a run).
-   * At 12x the bar outran the reward and run lengths doubled every time:
-   * 1h49m, 2h13m, 4h04m, 9h46m, and stalling from there.
+   * Tuned by measurement, not by argument. The bar has to rise no faster
+   * than connections actually compound, and they compound less than they
+   * look like they should: node costs are exponential, so a node's value
+   * grows only logarithmically in connections spent.
+   *
+   * 12x gave 1h49m, 2h13m, 4h04m, 9h46m and then a stall. 4x gave a stall
+   * at run five. 2.2x holds the first six runs under 2h40m and reaches nine
+   * runs inside three days.
    */
-  PRESTIGE_REQUIREMENT_GROWTH: 4,
+  PRESTIGE_REQUIREMENT_GROWTH: 2.2,
   /** Connections = floor(sqrt(lifetimeCleanThisRun / DIVISOR)). */
   PRESTIGE_DIVISOR: 1_000_000,
 

@@ -1,5 +1,5 @@
 import { engine, useGame } from '../store/gameStore'
-import { fmt, fmtMoney, fmtDuration } from '../engine/bignum'
+import { fmt, fmtMoney, fmtDuration, fmtRate } from '../engine/bignum'
 import { BALANCE } from '../engine/balance'
 import { Meter, SectionTitle } from './bits'
 import { sfx } from '../audio/sfx'
@@ -55,7 +55,7 @@ export function LawPanel() {
           <span className="display text-lg tracking-wide" style={{ color: band.tone }}>
             {band.name}
           </span>
-          <span className="tnum text-cream text-2xl font-semibold">{g.heat.toFixed(0)}</span>
+          <span className="tnum text-cream text-2xl font-semibold">{Math.round(g.heat)}</span>
         </div>
 
         <div className="mt-3">
@@ -68,13 +68,13 @@ export function LawPanel() {
           <div>
             <div className="text-cream-dim text-[10px] uppercase tracking-[0.14em]">Building</div>
             <div className="tnum text-sm font-semibold" style={{ color: 'var(--color-danger)' }}>
-              +{g.heatPerMin.toFixed(2)}/min
+              +{fmtRate(g.heatPerMin)}/min
             </div>
           </div>
           <div className="text-right">
             <div className="text-cream-dim text-[10px] uppercase tracking-[0.14em]">Cooling</div>
             <div className="tnum text-sm font-semibold" style={{ color: 'var(--color-ok)' }}>
-              -{g.heatDecayPerMin.toFixed(2)}/min
+              -{fmtRate(g.heatDecayPerMin)}/min
             </div>
           </div>
         </div>
@@ -83,7 +83,7 @@ export function LawPanel() {
           className="tnum mt-3 text-center text-[11px]"
           style={{ color: cooling ? 'var(--color-ok)' : 'var(--color-danger)' }}
         >
-          {cooling ? 'Settling' : 'Climbing'} {Math.abs(g.heatNetPerMin).toFixed(2)}/min
+          {cooling ? 'Settling' : 'Climbing'} {fmtRate(Math.abs(g.heatNetPerMin))}/min
           {secondsToEdge !== null && secondsToEdge < 60 * 60 && (
             <span className="text-cream-dim">
               {' '}· {cooling ? 'clear of' : 'into'} the next band in {fmtDuration(secondsToEdge)}
@@ -148,7 +148,7 @@ export function LawPanel() {
                 <div className="flex items-baseline justify-between gap-3 text-xs">
                   <span className="text-cream truncate">{src.name}</span>
                   <span className="tnum text-cream-dim shrink-0">
-                    +{src.perMin.toFixed(2)}/min · {fmt(src.unitsPerMin)} units/min
+                    +{fmtRate(src.perMin)}/min · {fmt(src.unitsPerMin)} units/min
                   </span>
                 </div>
                 <div className="mt-1">

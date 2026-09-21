@@ -71,7 +71,7 @@ export function TopBar() {
             className={`tnum text-[11px] font-medium ${g.band.band === 'burned' ? 'pulse-warn' : ''}`}
             style={{ color: `var(--color-${tone === 'ok' ? 'ok' : tone})` }}
           >
-            {BAND_LABEL[g.band.band]} · {g.heat.toFixed(0)}
+            {BAND_LABEL[g.band.band]} · {Math.round(g.heat)}
           </span>
         </div>
         <Meter pct={g.heat} tone={tone} />

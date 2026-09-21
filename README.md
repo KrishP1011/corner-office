@@ -30,7 +30,10 @@ Opens on http://localhost:5183.
 | `npm run dev` | Dev server with HMR |
 | `npm run build` | Typecheck, then production build to `dist/` |
 | `npm run typecheck` | Types only |
-| `npx tsx tools/simcheck.ts` | Headless balance harness (see below) |
+| `npx tsx tools/simcheck.ts` | Property checks over the whole engine |
+| `npx tsx tools/balance.ts [days]` | Simulated playthrough: milestones, curve, dead stretches |
+| `npx tsx tools/heatcheck.ts` | Checks suspicion is still a dial, not a constant |
+| `npm run package` | Build and zip for itch.io |
 
 **Dev panel:** press `` ` `` in a dev build. Skip time, add cash, set heat,
 unlock everything, export/import saves. It is excluded from production
@@ -225,8 +228,10 @@ with their screens, the event log, the Loadout with its crates, and crew
 with territory, prestige with the Connections tree, a balance pass, and the
 juice pass are all in, and the game packages for itch.io.
 
-Known and documented rather than hidden: late prestige runs lengthen more
-than they should (runs five and six land at ten and fourteen hours), heat
-sits at maximum under maximally greedy play, there is no cloud save, and
+Suspicion is a rate driven by how thin you cut, not a toll on volume, and
+`tools/heatcheck.ts` asserts it stays a dial. Prestige runs hold roughly
+flat for the first six cash-outs and reach nine inside three days.
+
+Known and documented rather than hidden: there is no cloud save, and
 monetisation is designed but not wired. DESIGN.md sections 12 and 20 have
 the detail.

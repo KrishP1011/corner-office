@@ -13,6 +13,7 @@ import {
   computeModifiers, cutMultiplier, priceMultiplier, stationCost,
   buffFromScore, autoRunUnlocked, customerCeiling, bribeCost, heatBand,
   itemStatAtLevel, launderPerMinute, crewEffort, crewWage, effectivePurity,
+  heatRatePerMinute,
   payrollPerMinute, blockDefense, blockValue, crewAvailable, totalLevels,
 } from '../src/engine/economy'
 import { DUFFEL_ODDS, shardsForLevel } from '../src/engine/balance'
@@ -117,16 +118,45 @@ check('heat stays survivable in the first session', state.run.heat < 95,
   `heat=${state.run.heat.toFixed(1)}`)
 
 // ---------------------------------------------------------------------------
-header('HEAT PRESSURE (level 400, purity 18 -- reckless volume)')
+header('HEAT PRESSURE (every line watered down as far as it will still sell)')
+// 18, not lower: under 15 every district in the game refuses, so nothing
+// sells, and a line that sells nothing draws no attention. Correct
+// behaviour, useless test.
 const hot = createInitialState(content)
-hot.run.products['cider'].level = 400
-hot.run.products['cider'].purity = 18
+for (const p of content.products) {
+  hot.run.products[p.id].unlocked = true
+  hot.run.products[p.id].level = 200
+  hot.run.products[p.id].purity = 18
+}
+for (const b of content.blocks) hot.run.blocks[b.id].unlocked = true
 const hotMods = computeModifiers(hot, content)
 for (const m of [5, 15, 30, 60]) {
   runFor(hot, content, hotMods, m === 5 ? 300 : 600, false)
   console.log(`  t=${String(m).padStart(3)}m  heat=${hot.run.heat.toFixed(1).padStart(5)}  dirty=${fmtMoney(hot.run.dirtyCash)}`)
 }
-check('reckless volume eventually draws heat', hot.run.heat > 40, `heat=${hot.run.heat.toFixed(1)}`)
+check('recklessness eventually draws heat', hot.run.heat > 40, `heat=${hot.run.heat.toFixed(1)}`)
+
+// Suspicion is a rate driven by the cut, not a toll on every unit.
+const cider = content.products[0]
+const bareMods = computeModifiers(createInitialState(content), content)
+const atFull = heatRatePerMinute(cider, 10, 100, 0, bareMods)
+const atHalf = heatRatePerMinute(cider, 10, 50, 0, bareMods)
+const atThin = heatRatePerMinute(cider, 10, 15, 0, bareMods)
+console.log(`  one line at 10 units/s: proof 100=${atFull.toFixed(2)}/min  50=${atHalf.toFixed(2)}  15=${atThin.toFixed(2)}`)
+check('watering down is what draws attention', atThin > atHalf && atHalf > atFull)
+check('selling honestly is a discount, not a penalty', atFull < atHalf)
+check('volume counts, but never runs away', (() => {
+  const small = heatRatePerMinute(cider, 1, 50, 0, bareMods)
+  const huge = heatRatePerMinute(cider, 100_000, 50, 0, bareMods)
+  // A hundred-thousand-fold operation, at most a handful of times as loud.
+  return huge > small && huge < small * 6
+})())
+check('dealers spread the risk', (() => {
+  const s = createInitialState(content)
+  for (const b of content.blocks) { s.run.blocks[b.id].unlocked = true; s.run.blocks[b.id].dealers = b.dealerSlots }
+  const spread = computeModifiers(s, content)
+  return heatRatePerMinute(cider, 10, 50, 0, spread) < atHalf
+})())
 
 // ---------------------------------------------------------------------------
 header('MINIGAMES')
@@ -218,10 +248,18 @@ check('heat is attributable to the lines that caused it',
   attributed > 0 && attributed <= attrReport.heatGained + 1e-6)
 
 // Band crossings should announce themselves exactly once.
+//
+// Calibrated against the rate model: suspicion is driven by how thin the
+// product is and which tiers are running, so a single watered-down tier-one
+// line is no longer enough to climb through the bands.
 const bandState = createInitialState(content)
 bandState.run.heat = 0
-bandState.run.products['cider'].level = 400
-bandState.run.products['cider'].purity = 18
+for (const p of content.products) {
+  bandState.run.products[p.id].unlocked = true
+  bandState.run.products[p.id].level = 200
+  bandState.run.products[p.id].purity = 18
+}
+for (const b of content.blocks) bandState.run.blocks[b.id].unlocked = true
 for (const b of content.blocks) {
   const bs = bandState.run.blocks[b.id]
   if (bs.unlocked) bs.customers = customerCeiling(b, bandState)

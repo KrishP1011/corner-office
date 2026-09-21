@@ -241,7 +241,7 @@ function TotalsList() {
             <span className="text-cream-dim text-xs">{STAT_LABEL[key]}</span>
             <span className="tnum text-brass-400 font-semibold">
               {key === 'purityFloor' ? `+${Math.round(value)}`
-                : key === 'offlineCap' ? `+${value.toFixed(1)}h`
+                : key === 'offlineCap' ? `+${Number(value.toFixed(1))}h`
                 : fmtPct(value)}
               {key === 'heatResist' && value >= 0.9 && (
                 <span className="text-cream-dim text-[10px]"> (capped)</span>

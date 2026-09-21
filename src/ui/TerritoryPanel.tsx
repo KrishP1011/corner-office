@@ -1,5 +1,5 @@
 import { engine, useGame, type BlockView } from '../store/gameStore'
-import { fmtMoney } from '../engine/bignum'
+import { fmtMoney, fmtMult, fmtRate } from '../engine/bignum'
 import { SectionTitle, Meter, Empty } from './bits'
 
 export function TerritoryPanel() {
@@ -108,7 +108,7 @@ function BlockRow({ b }: { b: BlockView }) {
               ? 'lost'
               : holding
                 ? 'holding'
-                : `+${b.pressurePerMin.toFixed(1)}/min`}
+                : `+${fmtRate(b.pressurePerMin)}/min`}
           </span>
         </div>
         <Meter
@@ -119,10 +119,10 @@ function BlockRow({ b }: { b: BlockView }) {
 
       <div className="text-cream-dim mt-1.5 flex items-center justify-between text-[10px]">
         <span>
-          {b.dealers}/{b.def.dealerSlots} dealers · {b.defense.toFixed(0)} muscle
+          {b.dealers}/{b.def.dealerSlots} dealers · {Math.round(b.defense)} muscle
         </span>
         <span className="tnum">
-          {g.strings.purityShort} {b.def.minPurity}+ · {b.def.priceMod.toFixed(2)}x
+          {g.strings.purityShort} {b.def.minPurity}+ · {fmtMult(b.def.priceMod)}
         </span>
       </div>
 

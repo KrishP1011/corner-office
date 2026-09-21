@@ -289,7 +289,7 @@ function RevealCard({
 /** Points for proof and hours, percentages for everything else. */
 export function formatStat(key: StatKey, value: number): string {
   if (key === 'purityFloor' || key === 'defense') return `+${Math.round(value)}`
-  if (key === 'offlineCap') return `+${value.toFixed(1)}h`
+  if (key === 'offlineCap') return `+${Number(value.toFixed(1))}h`
   return fmtPct(value)
 }
 

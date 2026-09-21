@@ -31,8 +31,12 @@ export interface ProductDef {
   /** Dirty cash cost of the first level. */
   baseStationCost: string
   costGrowth: number
-  /** Heat generated per unit sold, before resistances. */
-  heatPerUnit: number
+  /**
+   * Suspicion per minute this line draws while it is moving product, at full
+   * proof and before any suppression. A rate rather than a per-unit toll:
+   * see BALANCE.HEAT_VOLUME_WEIGHT for why.
+   */
+  heatPerMinute: number
   minigame: MinigameKind
   /** Location that must be owned before this line can be built. */
   requiresLocation: string
@@ -304,6 +308,10 @@ export interface Modifiers {
   duffelDropRate: number
   /** Multiplier on every district's customer ceiling. */
   demandMult: number
+  /** Divides the attention each unit draws. Rises with dealers on corners. */
+  heatSpread: number
+  /** Multiplier on output, compounding, from the uncapped connection. */
+  yieldMult: number
   /** Total defence available to every district. */
   defense: number
   /** Fraction of raid losses avoided, 0-1. */

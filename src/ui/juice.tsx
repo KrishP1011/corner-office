@@ -63,13 +63,18 @@ export function Money({
   const prev = useRef(value)
 
   useEffect(() => {
-    if (value.lt(prev.current)) {
-      setSpent(true)
-      const t = window.setTimeout(() => setSpent(false), 380)
-      prev.current = value
-      return () => window.clearTimeout(t)
-    }
+    // Only a real spend, not the constant small drain of payroll and
+    // laundering -- otherwise the figure sits permanently red and the
+    // signal means nothing.
+    const drop = prev.current.sub(value)
+    const meaningful = drop.gt(prev.current.mul(big(0.02)))
+
     prev.current = value
+    if (!meaningful) return
+
+    setSpent(true)
+    const t = window.setTimeout(() => setSpent(false), 380)
+    return () => window.clearTimeout(t)
   }, [value])
 
   return (

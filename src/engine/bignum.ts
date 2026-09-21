@@ -66,11 +66,12 @@ const SUFFIXES = [
 ]
 
 /**
- * Idle-game number formatting: 1.23K, 45.6M, 7.89Qa, then scientific once we
+ * Idle-game number formatting: 1.23K, 45.6M, 789M, then scientific once we
  * run out of suffixes.
  *
- * Small values keep decimals so early progress is visible -- watching "12"
- * sit still for thirty seconds feels broken, watching "12.4" tick does not.
+ * Roughly three significant figures throughout, and trailing zeros are
+ * always trimmed. A screen full of "2.00x" and "$1.50M" reads as noise;
+ * "2x" and "$1.5M" say the same thing and are easier to scan.
  */
 export function fmt(v: Big | number, decimals = 2): string {
   const d = typeof v === 'number' ? new Decimal(v) : v
@@ -78,12 +79,9 @@ export function fmt(v: Big | number, decimals = 2): string {
   if (d.lt(0)) return '-' + fmt(d.neg(), decimals)
   if (d.lt(1000)) {
     const n = d.toNumber()
-    // Precision that shrinks as the number grows. Trailing zeros on small
-    // values ("$0.000") read as broken rather than precise.
     if (n < 0.01) return '0'
     if (n < 10) return trimZeros(n.toFixed(2))
-    if (n < 100) return trimZeros(n.toFixed(1))
-    return Math.floor(n).toString()
+    return Math.round(n).toString()
   }
 
   const exp = Math.floor(d.log10())
@@ -91,11 +89,18 @@ export function fmt(v: Big | number, decimals = 2): string {
 
   if (tier >= SUFFIXES.length) {
     const mantissa = d.div(Decimal.pow(10, exp))
-    return `${mantissa.toNumber().toFixed(decimals)}e${exp}`
+    return `${trimZeros(mantissa.toNumber().toFixed(decimals))}e${exp}`
   }
 
   const scaled = d.div(Decimal.pow(10, tier * 3)).toNumber()
-  return `${scaled.toFixed(decimals)}${SUFFIXES[tier]}`
+  return `${sigFigs(scaled)}${SUFFIXES[tier]}`
+}
+
+/** Three significant figures inside a suffix band: 1.23K, 12.3K, 123K. */
+function sigFigs(n: number): string {
+  if (n < 10) return trimZeros(n.toFixed(2))
+  if (n < 100) return trimZeros(n.toFixed(1))
+  return Math.round(n).toString()
 }
 
 /** Money. Same as fmt but with a leading $. */
@@ -126,5 +131,20 @@ export function fmtDuration(seconds: number): string {
 /** Percentage with a sign, for buff display. */
 export function fmtPct(v: number, decimals = 0): string {
   const sign = v > 0 ? '+' : ''
-  return `${sign}${(v * 100).toFixed(decimals)}%`
+  return `${sign}${trimZeros((v * 100).toFixed(decimals))}%`
+}
+
+/** A multiplier, without the dead zeros: 2x, 1.33x, 10x. */
+export function fmtMult(v: number): string {
+  if (!Number.isFinite(v)) return '-'
+  if (v >= 100) return `${Math.round(v)}x`
+  if (v >= 10) return `${trimZeros(v.toFixed(1))}x`
+  return `${trimZeros(v.toFixed(2))}x`
+}
+
+/** A rate per minute or second, kept to one decimal at most. */
+export function fmtRate(v: number, decimals = 1): string {
+  if (!Number.isFinite(v)) return '0'
+  if (Math.abs(v) >= 100) return Math.round(v).toString()
+  return trimZeros(v.toFixed(decimals))
 }

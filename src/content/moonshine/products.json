@@ -10,9 +10,9 @@
     "cycleSeconds": 8,
     "baseStationCost": "15",
     "costGrowth": 1.12,
-    "heatPerUnit": 8e-05,
     "minigame": "none",
-    "requiresLocation": "shack"
+    "requiresLocation": "shack",
+    "heatPerMinute": 0.25
   },
   {
     "id": "beer",
@@ -25,9 +25,9 @@
     "cycleSeconds": 20,
     "baseStationCost": "900",
     "costGrowth": 1.12,
-    "heatPerUnit": 0.00024,
     "minigame": "balance",
-    "requiresLocation": "shack"
+    "requiresLocation": "shack",
+    "heatPerMinute": 0.4
   },
   {
     "id": "shine",
@@ -40,9 +40,9 @@
     "cycleSeconds": 30,
     "baseStationCost": "55000",
     "costGrowth": 1.12,
-    "heatPerUnit": 0.00072,
     "minigame": "contamination",
-    "requiresLocation": "barn"
+    "requiresLocation": "barn",
+    "heatPerMinute": 0.7
   },
   {
     "id": "gin",
@@ -55,9 +55,9 @@
     "cycleSeconds": 45,
     "baseStationCost": "3200000",
     "costGrowth": 1.12,
-    "heatPerUnit": 0.0022,
     "minigame": "timing",
-    "requiresLocation": "cellar"
+    "requiresLocation": "cellar",
+    "heatPerMinute": 1.1
   },
   {
     "id": "scotch",
@@ -70,9 +70,9 @@
     "cycleSeconds": 60,
     "baseStationCost": "210000000",
     "costGrowth": 1.12,
-    "heatPerUnit": 0.0066,
     "minigame": "route",
-    "requiresLocation": "warehouse"
+    "requiresLocation": "warehouse",
+    "heatPerMinute": 1.7
   },
   {
     "id": "everclear",
@@ -85,8 +85,8 @@
     "cycleSeconds": 90,
     "baseStationCost": "14000000000",
     "costGrowth": 1.12,
-    "heatPerUnit": 0.02,
     "minigame": "stability",
-    "requiresLocation": "distillery"
+    "requiresLocation": "distillery",
+    "heatPerMinute": 2.6
   }
 ]
