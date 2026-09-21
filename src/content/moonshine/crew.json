@@ -1,0 +1,7 @@
+[
+  { "id": "crew_hattie", "name": "Hattie Voss",    "role": "chemist",    "rarity": "solid",       "stats": { "purityFloor": 6 },   "marketWage": "40",   "flavor": "Ran the county fair's preserves booth for nine years. Knows exactly what heat does to sugar." },
+  { "id": "crew_pike",   "name": "Ambrose Pike",   "role": "enforcer",   "rarity": "street",      "stats": { "heatResist": 0.04 }, "marketWage": "25",   "flavor": "Not large. Just extremely willing." },
+  { "id": "crew_deel",   "name": "Junie Deel",     "role": "mule",       "rarity": "solid",       "stats": { "yield": 0.08 },      "marketWage": "55",   "flavor": "Drives the ridge road at night with the headlamps off. Has never lost a load." },
+  { "id": "crew_marsh",  "name": "Cordell Marsh",  "role": "lawyer",     "rarity": "connected",   "stats": { "heatResist": 0.14 }, "marketWage": "400",  "flavor": "Went to school with two of the three judges. Reminds them of it constantly." },
+  { "id": "crew_okonkwo","name": "Beatrice Okonkwo","role": "accountant","rarity": "connected",   "stats": { "launderRate": 0.16 },"marketWage": "380",  "flavor": "Keeps four sets of books and can produce whichever one is asked for." }
+]

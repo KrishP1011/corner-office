@@ -1,0 +1,6 @@
+[
+  { "id": "laundry",  "name": "Hand Laundry",     "tagline": "Cash business, no receipts, open late.",        "cost": "50000",      "ratePerMin": 0.05, "capacity": "10000" },
+  { "id": "garage",   "name": "Auto Garage",      "tagline": "Parts and labor. Mostly labor. Mostly not.",    "cost": "2000000",    "ratePerMin": 0.08, "capacity": "500000" },
+  { "id": "pharmacy", "name": "Corner Pharmacy",  "tagline": "Medicinal permits are a beautiful thing.",      "cost": "150000000",  "ratePerMin": 0.12, "capacity": "50000000" },
+  { "id": "funeral",  "name": "Funeral Parlor",   "tagline": "Grieving families do not itemize.",             "cost": "10000000000","ratePerMin": 0.20, "capacity": "5000000000" }
+]

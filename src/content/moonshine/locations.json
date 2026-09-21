@@ -1,0 +1,8 @@
+[
+  { "id": "shack",      "name": "Backwoods Shack",     "tagline": "Dirt floor, one window, nobody for a mile.",      "cost": "0",            "stationSlots": 2,  "heatMod": 0.0 },
+  { "id": "barn",       "name": "Rented Barn",         "tagline": "The farmer asks no questions for forty a month.", "cost": "25000",        "stationSlots": 3,  "heatMod": 0.05 },
+  { "id": "cellar",     "name": "Church Cellar",       "tagline": "Consecrated ground. Nobody searches it twice.",   "cost": "1200000",      "stationSlots": 4,  "heatMod": 0.10 },
+  { "id": "warehouse",  "name": "Riverside Warehouse", "tagline": "Rail spur out back, water out front.",            "cost": "80000000",     "stationSlots": 6,  "heatMod": 0.20 },
+  { "id": "distillery", "name": "Bonded Distillery",   "tagline": "Licensed for industrial alcohol. On paper.",      "cost": "6000000000",   "stationSlots": 8,  "heatMod": 0.35 },
+  { "id": "island",     "name": "Rum Row Island",      "tagline": "Three miles out. No warrant reaches this far.",   "cost": "400000000000", "stationSlots": 10, "heatMod": -0.20 }
+]

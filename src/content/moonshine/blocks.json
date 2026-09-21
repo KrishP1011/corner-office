@@ -1,0 +1,18 @@
+[
+  { "id": "docks_pier",    "name": "The Long Pier",   "district": "The Docks",        "wants": ["cider", "beer"],           "minPurity": 15, "volume": 2.0, "priceMod": 0.80, "dealerSlots": 2 },
+  { "id": "docks_yard",    "name": "Freight Yard",    "district": "The Docks",        "wants": ["cider", "beer"],           "minPurity": 15, "volume": 2.2, "priceMod": 0.75, "dealerSlots": 2 },
+  { "id": "docks_row",     "name": "Sailors Row",     "district": "The Docks",        "wants": ["cider", "beer", "shine"],  "minPurity": 20, "volume": 1.8, "priceMod": 0.90, "dealerSlots": 2 },
+
+  { "id": "mill_boarding", "name": "Boarding Houses", "district": "Mill Row",         "wants": ["beer", "shine"],           "minPurity": 35, "volume": 1.5, "priceMod": 1.00, "dealerSlots": 3 },
+  { "id": "mill_hall",     "name": "Union Hall",      "district": "Mill Row",         "wants": ["beer", "shine", "gin"],    "minPurity": 35, "volume": 1.4, "priceMod": 1.10, "dealerSlots": 3 },
+
+  { "id": "thtr_supper",   "name": "Supper Clubs",    "district": "Theater District", "wants": ["gin", "scotch"],           "minPurity": 55, "volume": 1.0, "priceMod": 1.60, "dealerSlots": 3 },
+  { "id": "thtr_backstage","name": "Backstage",       "district": "Theater District", "wants": ["gin", "scotch"],           "minPurity": 55, "volume": 0.9, "priceMod": 1.75, "dealerSlots": 3 },
+  { "id": "thtr_hotel",    "name": "The Marquis",     "district": "Theater District", "wants": ["gin", "scotch"],           "minPurity": 60, "volume": 0.8, "priceMod": 2.00, "dealerSlots": 3 },
+
+  { "id": "hts_terrace",   "name": "Park Terrace",    "district": "The Heights",      "wants": ["scotch"],                  "minPurity": 80, "volume": 0.5, "priceMod": 3.20, "dealerSlots": 4 },
+  { "id": "hts_club",      "name": "The Athenaeum",   "district": "The Heights",      "wants": ["scotch"],                  "minPurity": 85, "volume": 0.4, "priceMod": 4.00, "dealerSlots": 4 },
+
+  { "id": "iron_gates",    "name": "Factory Gates",   "district": "Ironworks",        "wants": ["shine", "everclear"],      "minPurity": 25, "volume": 2.4, "priceMod": 1.05, "dealerSlots": 4 },
+  { "id": "iron_camps",    "name": "Work Camps",      "district": "Ironworks",        "wants": ["everclear"],               "minPurity": 20, "volume": 2.6, "priceMod": 1.00, "dealerSlots": 4 }
+]

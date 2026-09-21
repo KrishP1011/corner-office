@@ -1,0 +1,14 @@
+{
+  "gameTitle": "Moonshine Run",
+  "purityLabel": "Proof",
+  "purityShort": "PRF",
+  "heatLabel": "Suspicion",
+  "lawLabel": "Revenuers",
+  "dirtyLabel": "Loose Cash",
+  "cleanLabel": "Banked",
+  "cutVerb": "Water Down",
+  "prestigeLabel": "Go Straight",
+  "prestigeCurrency": "Connections",
+  "chestLabel": "Crate",
+  "chestTiers": ["Burlap Sack", "Locked Crate", "Bonded Case"]
+}

@@ -1,0 +1,14 @@
+[
+  { "id": "watch_pocket",   "name": "Dented Pocket Watch", "slot": "watch",     "rarity": "street",      "stats": { "yield": 0.03 },                      "flavor": "Runs four minutes fast. You have learned to account for it." },
+  { "id": "watch_deadman",  "name": "Dead Man's Watch",    "slot": "watch",     "rarity": "untouchable", "stats": { "yield": 0.35, "offlineCap": 4 },      "unique": "deadmans_watch", "flavor": "Taken off a man who no longer needed the time." },
+  { "id": "chain_plated",   "name": "Plated Chain",        "slot": "chain",     "rarity": "street",      "stats": { "price": 0.03 },                      "flavor": "Gold for about a week, then green." },
+  { "id": "burner_party",   "name": "Party Line",          "slot": "burner",    "rarity": "street",      "stats": { "price": 0.02, "yield": 0.02 },       "flavor": "Half the county listens in. Half the county buys." },
+  { "id": "burner_ghost",   "name": "Ghost Line",          "slot": "burner",    "rarity": "untouchable", "stats": { "heatResist": 0.30 },                 "unique": "ghost_line", "flavor": "A number that was never issued, on an exchange that burned down in 1919." },
+  { "id": "piece_derringer","name": "Vest Derringer",      "slot": "piece",     "rarity": "street",      "stats": { "heatResist": 0.03 },                 "flavor": "Two shots. Mostly it is the showing that works." },
+  { "id": "ride_flivver",   "name": "Rusted Flivver",      "slot": "ride",      "rarity": "street",      "stats": { "yield": 0.04 },                      "flavor": "Forty on the flat. Thirty with a load." },
+  { "id": "case_cardboard", "name": "Pasteboard Case",     "slot": "briefcase", "rarity": "street",      "stats": { "launderRate": 0.04 },                "flavor": "Holds money. Does not hold rain." },
+  { "id": "case_cleanhands","name": "Clean Hands",         "slot": "briefcase", "rarity": "untouchable", "stats": { "launderRate": 0.40 },                "unique": "clean_hands", "flavor": "Belonged to an alderman. Still smells faintly of his cologne." },
+  { "id": "jacket_oilskin", "name": "Oilskin Coat",        "slot": "jacket",    "rarity": "street",      "stats": { "heatResist": 0.04 },                 "flavor": "Smells like the river. Everyone on the river smells like the river." },
+  { "id": "jacket_nobody",  "name": "Nobody's Jacket",     "slot": "jacket",    "rarity": "untouchable", "stats": { "heatResist": 0.38 },                 "unique": "nobodys_jacket", "flavor": "Gray, unremarkable, the exact wrong weight for every season. No one has ever described you in it." },
+  { "id": "kicks_workboot", "name": "Cracked Work Boots",  "slot": "kicks",     "rarity": "street",      "stats": { "yield": 0.03 },                      "flavor": "Resoled twice. You walk the whole route in these." }
+]

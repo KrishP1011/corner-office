@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+/*
+ * Moonshine Run -- visual system.
+ *
+ * Dark only, on purpose: this is a game set at night during Prohibition, not
+ * a document. There is no light mode to fall back to, so the palette is
+ * declared outright rather than behind a prefers-color-scheme query.
+ *
+ * Restraint is the point. Two neutrals, one brass accent, and a small set of
+ * state colors. Every extra hue makes the whole thing look cheaper.
+ */
+@theme {
+  --color-ink-950: #070b12;
+  --color-ink-900: #0a111c;
+  --color-ink-800: #0f1826;
+  --color-ink-700: #152033;
+  --color-ink-600: #1d2a40;
+  --color-ink-500: #2a3a54;
+  --color-ink-400: #3d5273;
+
+  --color-brass-300: #f0d478;
+  --color-brass-400: #e0b94a;
+  --color-brass-500: #c9a227;
+  --color-brass-600: #96761b;
+  --color-brass-700: #5e4a13;
+
+  --color-cream: #f4efe4;
+  --color-cream-dim: #9ca496;
+
+  --color-money: #f0b429;
+  --color-danger: #d1483c;
+  --color-warn: #dd8b2c;
+  --color-ok: #61a46f;
+
+  --font-display: "Limelight", ui-serif, Georgia, serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink-950);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* A faint warm glow from the top, so the page has a light source. */
+#root {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(224, 185, 74, 0.10), transparent 60%),
+    linear-gradient(to bottom, var(--color-ink-900), var(--color-ink-950));
+}
+
+/* Tabular figures everywhere numbers change, so they stop jittering. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+/* Thin brass rule -- the deco motif that ties the panels together. */
+.rule-brass {
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-brass-600) 20%,
+    var(--color-brass-400) 50%,
+    var(--color-brass-600) 80%,
+    transparent
+  );
+}
+
+.panel {
+  background: linear-gradient(to bottom, var(--color-ink-700), var(--color-ink-800));
+  border: 1px solid var(--color-ink-500);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.8);
+}
+
+.panel-raised {
+  background: linear-gradient(to bottom, var(--color-ink-600), var(--color-ink-700));
+  border: 1px solid var(--color-ink-500);
+  border-radius: 0.375rem;
+}
+
+/* Buttons ------------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-ink-400);
+  background: linear-gradient(to bottom, var(--color-ink-600), var(--color-ink-700));
+  color: var(--color-cream);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: transform 90ms ease, filter 120ms ease, border-color 120ms ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:hover:not(:disabled) { filter: brightness(1.18); border-color: var(--color-brass-600); }
+.btn:active:not(:disabled) { transform: translateY(1px) scale(0.985); }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+.btn-brass {
+  border-color: var(--color-brass-600);
+  background: linear-gradient(to bottom, var(--color-brass-400), var(--color-brass-600));
+  color: var(--color-ink-950);
+  font-weight: 600;
+}
+.btn-brass:hover:not(:disabled) { filter: brightness(1.1); }
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--color-ink-500);
+  color: var(--color-cream-dim);
+}
+
+/* Cut slider --------------------------------------------------------------- */
+
+.cut-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  /* Watered at the left, full strength at the right. */
+  background: linear-gradient(to right, var(--color-ink-400), var(--color-brass-400));
+}
+.cut-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, var(--color-brass-300), var(--color-brass-500));
+  border: 2px solid var(--color-ink-900);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  transition: transform 90ms ease;
+}
+.cut-slider::-webkit-slider-thumb:active { transform: scale(1.15); }
+.cut-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-brass-400);
+  border: 2px solid var(--color-ink-900);
+  cursor: pointer;
+}
+
+/* Progress ----------------------------------------------------------------- */
+
+.meter {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-ink-900);
+  overflow: hidden;
+  border: 1px solid var(--color-ink-600);
+}
+.meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes pulse-warn {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.pulse-warn { animation: pulse-warn 1.4s ease-in-out infinite; }
+
+/* Scrollbars --------------------------------------------------------------- */
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-ink-900); }
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-500);
+  border-radius: 999px;
+  border: 2px solid var(--color-ink-900);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-400); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
