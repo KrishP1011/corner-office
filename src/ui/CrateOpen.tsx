@@ -3,9 +3,15 @@ import { engine, RARITY_COLOR, RARITY_LABEL, SLOT_LABEL, STAT_LABEL } from '../s
 import { fmtPct } from '../engine/bignum'
 import { BALANCE } from '../engine/balance'
 import { itemStatAtLevel } from '../engine/economy'
+import { sfx } from '../audio/sfx'
+import { emitFloat } from './juice'
 import type { DuffelTier, OpenResult, StatKey } from '../engine/types'
 
 type Phase = 'ready' | 'straining' | 'burst' | 'reveal'
+
+const RARITY_INDEX: Record<string, number> = {
+  street: 0, solid: 1, connected: 2, made: 3, untouchable: 4,
+}
 
 const TIER_LOOK: Record<DuffelTier, { wood: string; band: string }> = {
   street:  { wood: '#4a3b28', band: '#6b5a42' },
@@ -37,6 +43,7 @@ export function CrateOpen({ tier, onClose }: { tier: DuffelTier; onClose: () => 
     setResult(r)
     setRemaining(engine.state.meta.duffels[tier])
     setPhase('straining')
+    sfx.play('strain')
   }
 
   // Each phase schedules only the next one.
@@ -50,10 +57,18 @@ export function CrateOpen({ tier, onClose }: { tier: DuffelTier; onClose: () => 
       return () => window.clearTimeout(t)
     }
     if (phase === 'burst') {
+      sfx.play('burst')
       const t = window.setTimeout(() => setPhase('reveal'), 470)
       return () => window.clearTimeout(t)
     }
-  }, [phase])
+    if (phase === 'reveal' && result) {
+      // The sting is pitched to the rarity, so you hear what it is before
+      // you have read the card.
+      sfx.sting(RARITY_INDEX[result.item.rarity] ?? 0)
+      if (result.isNew) emitFloat(`NEW · ${result.item.name}`, 'brass')
+      else if (result.leveledUp) emitFloat(`${result.item.name} → Lv ${result.level}`, 'good')
+    }
+  }, [phase, result])
 
   const again = () => {
     setResult(null)

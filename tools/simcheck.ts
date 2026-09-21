@@ -671,6 +671,22 @@ check('corrupt save does not throw', (() => {
 })())
 
 // ---------------------------------------------------------------------------
+header('ONBOARDING AND SHIPPING')
+
+check('tips are remembered across a save', (() => {
+  const s = createInitialState(content)
+  s.meta.hintsSeen = ['intro', 'heat']
+  const back = deserialize(serialize(s), content)
+  return back.meta.hintsSeen.includes('intro') && back.meta.hintsSeen.includes('heat')
+})())
+check('tips survive cashing out', (() => {
+  const s = createInitialState(content)
+  s.meta.hintsSeen = ['intro']
+  return applyPrestige(s, content, big(0)).meta.hintsSeen.includes('intro')
+})())
+check('a fresh save has seen nothing', createInitialState(content).meta.hintsSeen.length === 0)
+
+// ---------------------------------------------------------------------------
 header('FORMATTING')
 for (const v of ['0', '7.5', '999', '1234', '1.5e6', '8.2e9', '3.3e15', '9.9e33', '1e120', '1e600']) {
   console.log(`  ${v.padStart(8)} -> ${fmt(big(v))}`)

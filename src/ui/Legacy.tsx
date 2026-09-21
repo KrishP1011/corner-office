@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { engine, useGame, type NodeView } from '../store/gameStore'
 import { fmt, fmtMoney, fmtDuration } from '../engine/bignum'
 import { Meter } from './bits'
+import { sfx } from '../audio/sfx'
+import { emitFloat } from './juice'
 
 /**
  * The permanent half of the game: Connections, and the decision to cash out.
@@ -106,7 +108,7 @@ function NodeRow({ n }: { n: NodeView }) {
         <button
           className={`btn shrink-0 px-2.5 py-1 text-[11px] ${n.affordable ? 'btn-brass' : ''}`}
           disabled={!n.affordable}
-          onClick={() => engine.spendConnection(n.node.id)}
+          onClick={() => { if (engine.spendConnection(n.node.id)) sfx.play('buy') }}
         >
           {n.maxed ? 'done' : n.cost}
         </button>
@@ -129,7 +131,11 @@ function GetOutModal({ onClose }: { onClose: () => void }) {
   const [confirmed, setConfirmed] = useState(false)
 
   const done = () => {
-    engine.prestige()
+    const payout = g.prestigePayout
+    if (engine.prestige()) {
+      sfx.play('reveal')
+      emitFloat(`+${fmt(payout)} ${g.strings.prestigeCurrency.toLowerCase()}`, 'brass')
+    }
     onClose()
   }
 

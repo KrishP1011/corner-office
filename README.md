@@ -192,11 +192,41 @@ that is not a ratio should be treated as a bug until proven otherwise.** Five
 separate flat constants have now had to be reformulated as shares of income,
 including one that priced mid-game progression at over a thousand hours.
 
+## Feel
+
+Sound is **synthesised at runtime**, not downloaded — clicks, coins, a
+siren for a raid, filtered noise for a crate straining, and a reveal sting
+pitched to the rarity, so you hear what is in a crate slightly before you
+read it. Zero bytes of audio, works offline. The first tap anywhere opens
+the audio context, because browsers will not do it unprompted.
+
+Counters flow instead of stepping. The simulation publishes four times a
+second; money eases toward its target every frame and flinches when spent.
+Floaters are reserved for discrete events, because income is continuous and
+a floater per tick would be a blizzard.
+
+The figure on the Kit screen wears what you have equipped — coat, shoes,
+hat, the case in its hand — and straightens up as you come up in the world.
+
+## Shipping
+
+```bash
+npm run package
+```
+
+118 KB zip, four files, ready for itch.io. See [SHIPPING.md](SHIPPING.md)
+for the upload settings and what is deliberately not finished.
+
 ## Status
 
-Parts 1-6 of a seven-part build. Engine, economy, save system, content
+All seven parts built. Engine, economy, save system, content
 pipeline, dev tooling, the five minigames, the heat and laundering systems
 with their screens, the event log, the Loadout with its crates, and crew
-with territory, prestige with the Connections tree, and a first balance pass
-are in. Still to come: the juice pass — sound, number tweening, the
-paper-doll character, a tutorial, and the itch.io build.
+with territory, prestige with the Connections tree, a balance pass, and the
+juice pass are all in, and the game packages for itch.io.
+
+Known and documented rather than hidden: late prestige runs lengthen more
+than they should (runs five and six land at ten and fourteen hours), heat
+sits at maximum under maximally greedy play, there is no cloud save, and
+monetisation is designed but not wired. DESIGN.md sections 12 and 20 have
+the detail.

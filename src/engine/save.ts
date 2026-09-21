@@ -174,6 +174,9 @@ export function deserialize(json: string, content: ContentPack): GameState {
   state.meta.lifetimeCleanEarned = bigFromJSON(m.lifetimeCleanEarned)
   state.meta.totalPrestiges = clampNumber(m.totalPrestiges, 0, Number.MAX_SAFE_INTEGER, 0)
   state.meta.purchased2x = m.purchased2x === true
+  state.meta.hintsSeen = Array.isArray(m.hintsSeen)
+    ? m.hintsSeen.filter((h: unknown) => typeof h === 'string')
+    : []
   state.meta.connectionsSpent = isObject(m.connectionsSpent) ? m.connectionsSpent : {}
   state.meta.duffels = {
     street: clampNumber(m.duffels?.street, 0, Number.MAX_SAFE_INTEGER, 0),

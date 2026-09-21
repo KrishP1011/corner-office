@@ -3,6 +3,8 @@ import { engine } from '../../store/gameStore'
 import { buffFromScore } from '../../engine/economy'
 import { BALANCE } from '../../engine/balance'
 import { fmtDuration } from '../../engine/bignum'
+import { sfx } from '../../audio/sfx'
+import { emitFloat } from '../juice'
 import type { ProductDef, QualityBuff } from '../../engine/types'
 import type { MinigameProps } from './shell'
 import { BalanceGame } from './BalanceGame'
@@ -40,8 +42,13 @@ export function MinigameModal({ def, onClose }: { def: ProductDef; onClose: () =
 
   const handleDone = (score: number) => {
     engine.completeMinigame(def.id, score)
-    setEarned(buffFromScore(def, score))
+    const buff = buffFromScore(def, score)
+    setEarned(buff)
     setPhase('result')
+
+    sfx.play(score > 0.55 ? 'reveal' : score > 0.2 ? 'good' : 'deny')
+    const lines = describeBuff(buff)
+    if (lines.length > 0) emitFloat(lines.join(' · '), score > 0.2 ? 'good' : 'brass')
   }
 
   return (

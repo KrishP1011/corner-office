@@ -10,6 +10,10 @@ import { CrewPanel } from './ui/CrewPanel'
 import { EventToast } from './ui/EventToast'
 import { OfflineModal } from './ui/OfflineModal'
 import { DevPanel } from './dev/DevPanel'
+import { FloatLayer } from './ui/juice'
+import { Intro, Hints } from './ui/Onboarding'
+import { installAudioUnlock } from './audio/sfx'
+import { useGameSound, useClickSounds } from './audio/useGameSound'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'production', label: 'Still' },
@@ -24,9 +28,13 @@ export default function App() {
   const { tab, setTab } = useUi()
   const g = useGame()
 
+  useGameSound()
+  useClickSounds()
+
   useEffect(() => {
     engine.start()
-    return () => engine.stop()
+    const releaseAudio = installAudioUnlock()
+    return () => { releaseAudio(); engine.stop() }
   }, [])
 
   return (
@@ -95,8 +103,11 @@ export default function App() {
         </div>
       </nav>
 
+      <FloatLayer />
       <EventToast />
       <OfflineModal />
+      <Intro />
+      <Hints />
       {import.meta.env.DEV && <DevPanel />}
     </div>
   )

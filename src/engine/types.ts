@@ -261,6 +261,8 @@ export interface MetaState {
   /** Per product: keep a weaker buff topped up automatically. */
   autoRun: Record<string, boolean>
   lifetimeCleanEarned: Big
+  /** One-time tips already shown. Persisted so they never repeat. */
+  hintsSeen: string[]
   /** Permanent 2x from the IAP. Local-only entitlement in v1. */
   purchased2x: boolean
 }

@@ -228,6 +228,7 @@ export interface Snapshot {
   dealerCost: Big
   retakeCost: Big
   contestedCount: number
+  hintsSeen: string[]
   connectionNodes: NodeView[]
   cleanEarnedThisRun: Big
   runAgeSeconds: number
@@ -474,6 +475,7 @@ function build(): Snapshot {
     canBribe: run.heat > 0 && run.dirtyCash.gte(bribe),
     bribesThisRun: run.bribesThisRun,
     events: engine.events.slice(0, 20),
+    hintsSeen: state.meta.hintsSeen,
     connectionNodes: CONNECTION_NODES.map((node) => {
       const level = nodeLevel(state, node.id)
       const maxed = level >= node.maxLevel

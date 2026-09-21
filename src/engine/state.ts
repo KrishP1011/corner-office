@@ -86,6 +86,7 @@ export function freshMeta(): MetaState {
     minigamePlays: {},
     autoRun: {},
     lifetimeCleanEarned: ZERO,
+    hintsSeen: [],
     purchased2x: false,
   }
 }

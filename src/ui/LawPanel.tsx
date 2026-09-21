@@ -2,6 +2,8 @@ import { engine, useGame } from '../store/gameStore'
 import { fmt, fmtMoney, fmtDuration } from '../engine/bignum'
 import { BALANCE } from '../engine/balance'
 import { Meter, SectionTitle } from './bits'
+import { sfx } from '../audio/sfx'
+import { emitFloat } from './juice'
 
 const BAND = {
   cold: {
@@ -112,7 +114,12 @@ export function LawPanel() {
           <button
             className="btn btn-brass shrink-0"
             disabled={!g.canBribe}
-            onClick={() => engine.bribe()}
+            onClick={() => {
+              const cost = g.bribeCost
+              if (!engine.bribe()) return
+              sfx.play('coin')
+              emitFloat(`-${fmtMoney(cost)} · quiet`, 'brass')
+            }}
           >
             {fmtMoney(g.bribeCost)}
           </button>

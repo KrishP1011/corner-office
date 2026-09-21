@@ -5,6 +5,9 @@ import { cutMultiplier, priceMultiplier } from '../engine/economy'
 import { BALANCE, nextMilestone } from '../engine/balance'
 import { Meter, SectionTitle, Empty } from './bits'
 import { MinigameModal, describeBuff } from './minigames'
+import { sfx } from '../audio/sfx'
+import { emitFloat } from './juice'
+import { Stagger } from './juice'
 import type { ProductDef } from '../engine/types'
 
 const AMOUNTS: { label: string; value: BuyAmount }[] = [
@@ -38,14 +41,15 @@ export function ProductionPanel() {
         ))}
       </div>
 
-      {visible.map((p) => (
+      {visible.map((p, i) => (
+        <Stagger key={p.def.id} index={i}>
         <ProductCard
-          key={p.def.id}
           p={p}
           buyAmount={buyAmount}
           market={marketFor(g, p)}
           onPlay={() => setOpenGame(p.def)}
         />
+        </Stagger>
       ))}
 
       {locked.length > 0 && (
@@ -113,7 +117,11 @@ function ProductCard({
           <button
             className="btn btn-brass shrink-0"
             disabled={!p.canUnlock}
-            onClick={() => engine.unlockProduct(p.def.id)}
+            onClick={() => {
+              if (!engine.unlockProduct(p.def.id)) return
+              sfx.play('good')
+              emitFloat(`${p.def.name} is running`, 'good')
+            }}
           >
             Open line · {fmtMoney(p.unlockCost)}
           </button>
@@ -213,7 +221,13 @@ function ProductCard({
         <button
           className="btn btn-brass flex-1"
           disabled={!canBuy}
-          onClick={() => engine.upgradeStation(p.def.id, buyAmount)}
+          onClick={() => {
+            const before = p.level
+            if (!engine.upgradeStation(p.def.id, buyAmount)) return
+            const gained = engine.state.run.products[p.def.id].level - before
+            sfx.play('buy')
+            emitFloat(`${p.def.name} +${gained}`, 'brass')
+          }}
         >
           {buyLabel} · {fmtMoney(buyCost)}
         </button>

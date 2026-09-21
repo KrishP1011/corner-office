@@ -597,6 +597,51 @@ and the grind becomes optional.
    within six seconds. Capped live spores at 8 and slowed maturity. Pressure
    should build, not detonate.
 
+### Part 7 — the juice pass, and shipping
+
+Shipped: sound, flowing counters, floaters, the figure, first-run
+onboarding, contextual tips, mobile polish, and an itch.io build.
+
+**Sound is synthesised, not downloaded.** Section 17 calls sound
+underrated and cheap, which is right, but shipping audio files would add
+megabytes to a game whose whole distribution advantage is starting
+instantly. Every voice is generated with WebAudio at runtime: clicks,
+coins, a refusal buzz, a siren for a raid, filtered noise for a crate
+straining, and a reveal sting **pitched to the rarity** — so you hear what
+is in a crate slightly before you read it. Zero download, works offline.
+Browsers will not open an audio context outside a gesture, so the first tap
+anywhere starts it and every call before that is a no-op.
+
+**Counters flow rather than step.** The engine publishes four times a
+second, which reads as a stutter on a number that should be moving. Money
+now eases toward its target every frame with a time-normalised constant, in
+Big throughout, and flinches red when it is spent. Floaters are reserved for
+discrete events — a purchase, a find, a loss — because income arrives
+continuously and a floater per tick would be a blizzard.
+
+**The figure**, deferred from Part 6. Flat vector rather than pixel art per
+the section 20 art-direction change: a dark silhouette with a warm rim light
+reads as deliberate at any size, where a mediocre sprite reads as cheap.
+Everything equipped changes something — the coat's length and colour, the
+shoes, the hat, the case hanging from the hand, the chain, a strap across
+the chest — and overall standing straightens the posture and upgrades the
+hat from a flat cap to a homburg with a brass band.
+
+The first version read as a scarecrow: the head was the same value as the
+background so the hat floated over a void, the shoes sat detached below the
+legs, and the arms were invisible. Rebuilt as one cohesive silhouette with
+everything layered on top of it.
+
+**Onboarding.** Four beats on first run, then tips that fire the first time
+the thing they explain actually happens — suspicion climbing, a crate
+arriving, a district refusing a batch, banked cash overtaking loose.
+Contextual beats a manual: nobody reads about suspicion until it is rising
+in front of them.
+
+**Shipping.** `npm run package` produces a 118 KB zip. Relative asset paths,
+because itch serves an uploaded build from a subdirectory inside an iframe
+and absolute paths resolve to nothing there. See SHIPPING.md.
+
 ### Part 6 — prestige, the book, and the balance pass
 
 Shipped: the Connections tree (9 nodes), the Get Out flow, and a real

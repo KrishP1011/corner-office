@@ -1,6 +1,8 @@
 import { useGame } from '../store/gameStore'
 import { fmtMoney } from '../engine/bignum'
 import { Meter } from './bits'
+import { Money } from './juice'
+import { MuteButton } from './MuteButton'
 
 const BAND_TONE = {
   cold: 'ok', warm: 'warn', hot: 'danger', burned: 'danger',
@@ -22,8 +24,11 @@ export function TopBar() {
         <span className="display text-brass-400 whitespace-nowrap text-base leading-none tracking-wider">
           {g.strings.gameTitle}
         </span>
-        <span className="text-cream-dim shrink-0 text-[10px] uppercase tracking-[0.2em]">
-          {g.totalPrestiges > 0 ? `Identity ${g.totalPrestiges + 1}` : 'Season One'}
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="text-cream-dim text-[10px] uppercase tracking-[0.2em]">
+            {g.totalPrestiges > 0 ? `Identity ${g.totalPrestiges + 1}` : 'Season One'}
+          </span>
+          <MuteButton />
         </span>
       </div>
 
@@ -33,12 +38,11 @@ export function TopBar() {
             <div className="text-cream-dim text-[10px] uppercase tracking-[0.14em]">
               {g.strings.dirtyLabel}
             </div>
-            <div
-              className="tnum text-lg font-semibold leading-tight"
+            <Money
+              value={g.dirty}
+              className="block text-lg font-semibold leading-tight"
               style={{ color: g.overCap ? 'var(--color-danger)' : 'var(--color-money)' }}
-            >
-              {fmtMoney(g.dirty)}
-            </div>
+            />
             <div className="tnum text-cream-dim text-[11px]">
               {fmtMoney(g.revenuePerSec)}/s
             </div>
@@ -50,9 +54,7 @@ export function TopBar() {
             <div className="text-cream-dim text-[10px] uppercase tracking-[0.14em]">
               {g.strings.cleanLabel}
             </div>
-            <div className="tnum text-cream text-lg font-semibold leading-tight">
-              {fmtMoney(g.clean)}
-            </div>
+            <Money value={g.clean} className="text-cream block text-lg font-semibold leading-tight" />
             <div className="tnum text-cream-dim text-[11px]">
               {fmtMoney(g.launderPerMin)}/min
             </div>

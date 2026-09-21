@@ -602,6 +602,19 @@ export class Engine {
     return true
   }
 
+  // -- Tips ----------------------------------------------------------------
+
+  hasSeenHint(id: string): boolean {
+    return this.state.meta.hintsSeen.includes(id)
+  }
+
+  markHint(id: string): void {
+    if (this.hasSeenHint(id)) return
+    this.state.meta.hintsSeen.push(id)
+    this.save()
+    this.notify()
+  }
+
   // -- Connections ---------------------------------------------------------
 
   connectionCost(nodeId: string): number {
