@@ -625,10 +625,22 @@ everything was a penalty measured against an unreachable ideal, and honest
 play at mid-game came out hotter than watering down — because cutting made
 districts refuse, which reduced the number of lines actually selling.
 
-`tools/heatcheck.ts` exists so this cannot drift again. It asserts the
-properties that make suspicion a dial: cutting thinner always costs quiet,
-investment always buys it back, an honest invested operation is not hunted,
-recklessness is still punished, and suspicion is never simply absent.
+`tools/heatcheck.ts` exists so this cannot drift again — and getting it to
+stop flaking taught two things worth keeping.
+
+**It was asserting on a saturated quantity.** Two scenarios both pinned at
+100 have no meaningful ordering, so the comparison was reading noise. The
+checks now assert on generated rate per minute, which does not saturate and
+is deterministic.
+
+**And it was asking a badly formed question.** "Investment buys quiet"
+conflated two different things: *cover* (fronts, a coat, a lawyer), which
+suppresses, and *reach* (dealers), which raises throughput and can switch on
+lines that were not moving. Separated, both behave sensibly — cover always
+buys quiet, and reaching wider turns out never to cost quiet either, because
+once every line is already selling, extra dealers only spread the same
+volume across more hands. That last one was asserted the wrong way round
+first, on a guess; the measurement corrected it.
 
 **Prestige pacing.** The requirement rose faster than connections actually
 compound. Node costs are exponential, so a node's value grows only
