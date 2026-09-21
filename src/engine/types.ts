@@ -86,6 +86,10 @@ export type Rarity = 'street' | 'solid' | 'connected' | 'made' | 'untouchable'
 export type StatKey =
   | 'yield' | 'purityFloor' | 'price'
   | 'heatResist' | 'launderRate' | 'offlineCap'
+  /** Holds a district against rivals. Crew and dealers supply it. */
+  | 'defense'
+  /** Fraction of a raid's losses avoided. */
+  | 'raidShield'
 
 export interface ItemDef {
   id: string
@@ -107,9 +111,21 @@ export interface CrewDef {
   role: CrewRole
   rarity: Rarity
   stats: Partial<Record<StatKey, number>>
-  /** Dirty cash per minute needed to hold loyalty steady. */
-  marketWage: string
+  /** Total station levels before this person will take your call. */
+  requiresLevels: number
+  /** Clean cash paid once, on hiring. */
+  hireCost: string
   flavor: string
+}
+
+/** What you are willing to pay, which is what loyalty actually tracks. */
+export type PayLevel = 'short' | 'fair' | 'generous'
+
+export interface CrewState {
+  defId: string
+  /** 0-100. Under 25 they start thinking about talking. */
+  loyalty: number
+  payLevel: PayLevel
 }
 
 export interface ThemeStrings {
@@ -178,6 +194,9 @@ export interface BlockState {
   /** Current customer count. Grows toward the ceiling, decays on bad product. */
   customers: number
   dealers: number
+  /** 0-100. At 100 somebody else is running this corner. */
+  rivalPressure: number
+  contested: boolean
 }
 
 export interface OwnedItem {
@@ -217,6 +236,8 @@ export interface RunState {
   lastBand: 'cold' | 'warm' | 'hot' | 'burned'
   /** Dead Man's Watch absorbs one raid per run. This records that it has. */
   raidShieldUsed: boolean
+  /** Who is on the payroll. One slot per role. */
+  crew: Partial<Record<CrewRole, CrewState>>
   /** Cumulative clean cash earned this run, drives the prestige payout. */
   cleanEarnedThisRun: Big
   startedAt: number
@@ -279,6 +300,10 @@ export interface Modifiers {
   duffelDropRate: number
   /** Multiplier on every district's customer ceiling. */
   demandMult: number
+  /** Total defence available to every district. */
+  defense: number
+  /** Fraction of raid losses avoided, 0-1. */
+  raidShield: number
   /** Unique effect ids from equipped Untouchables. */
   uniques: Set<string>
 }
@@ -292,6 +317,7 @@ export interface Modifiers {
 export type EventKind =
   | 'raid' | 'raidShielded' | 'badBatch' | 'bandUp' | 'bandDown'
   | 'crate' | 'churn' | 'bribe' | 'hoard'
+  | 'snitch' | 'crewAvailable' | 'blockLost' | 'blockHeld' | 'unpaid'
 
 export interface EventDraft {
   kind: EventKind

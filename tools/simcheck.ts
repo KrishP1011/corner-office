@@ -12,7 +12,8 @@ import { createInitialState } from '../src/engine/state'
 import {
   computeModifiers, cutMultiplier, priceMultiplier, stationCost,
   buffFromScore, autoRunUnlocked, customerCeiling, bribeCost, heatBand,
-  itemStatAtLevel, launderPerMinute,
+  itemStatAtLevel, launderPerMinute, crewEffort, crewWage, effectivePurity,
+  payrollPerMinute, blockDefense, blockValue, crewAvailable, totalLevels,
 } from '../src/engine/economy'
 import { DUFFEL_ODDS, shardsForLevel } from '../src/engine/balance'
 import type { ItemSlot, Rarity, StatKey } from '../src/engine/types'
@@ -398,6 +399,143 @@ check("Dead Man's Watch absorbs the first raid",
   watchReport.raided ? `shielded=${watch.run.raidShieldUsed}, cash ${beforeRaid} -> ${watch.run.dirtyCash.toString()}` : 'no raid fired')
 
 // ---------------------------------------------------------------------------
+header('CREW')
+
+const roles = new Map<string, number>()
+for (const c of content.crew) roles.set(c.role, (roles.get(c.role) ?? 0) + 1)
+console.log(`  ${content.crew.length} people across ${roles.size} roles`)
+check('the roster is filled out', content.crew.length >= 12)
+check('every role has somebody', roles.size === 5)
+check('every role has a first hire available from the start',
+  [...roles.keys()].every((role) =>
+    content.crew.some((c) => c.role === role && c.requiresLevels <= 30)))
+
+console.log(`  effort at loyalty 100=${crewEffort(100).toFixed(2)} 25=${crewEffort(25).toFixed(2)} 0=${crewEffort(0).toFixed(2)}`)
+check('a happy hire works fully', crewEffort(100) === 1)
+check('an unhappy one is a liability before a loss',
+  crewEffort(10) < 1 && crewEffort(10) > 0)
+
+// Wages have to scale with the operation, like payoffs do.
+const smallCrew = traded(20, 0)
+const bigCrew = traded(300, 0)
+const hattie = content.crew.find((c) => c.id === 'crew_hattie')!
+const wSmall = crewWage(hattie, 'fair', smallCrew)
+const wBig = crewWage(hattie, 'fair', bigCrew)
+console.log(`  same hire at level 20=${fmtMoney(wSmall)}/min  at level 300=${fmtMoney(wBig)}/min`)
+check('wages scale with the operation', wBig.gt(wSmall.mul(5)))
+check('paying generously costs more than paying short',
+  crewWage(hattie, 'generous', bigCrew).gt(crewWage(hattie, 'short', bigCrew)))
+
+// Loyalty must actually move, in both directions.
+function runPaying(pay: 'short' | 'fair' | 'generous', minutes: number) {
+  const s = traded(80, 0)
+  s.run.crew['chemist'] = { defId: 'crew_hattie', loyalty: 60, payLevel: pay }
+  runFor(s, content, computeModifiers(s, content), minutes * 60, false)
+  return s.run.crew['chemist']?.loyalty ?? -1
+}
+const shortPay = runPaying('short', 5)
+const generousPay = runPaying('generous', 5)
+console.log(`  after 5 min: short=${shortPay.toFixed(0)} generous=${generousPay.toFixed(0)} (from 60)`)
+check('paying short costs loyalty', shortPay < 60)
+check('paying well earns it back', generousPay > 60)
+
+// Somebody left at zero loyalty has to eventually talk. Run several hours
+// independently: one hour alone fails by chance about once in 150 tries,
+// and a test that flakes is worse than no test.
+let talkedIn = 0
+let heatAfterTalking = 0
+for (let i = 0; i < 6; i++) {
+  const sour = traded(80, 0)
+  sour.run.crew['chemist'] = { defId: 'crew_hattie', loyalty: 1, payLevel: 'short' }
+  const r = runFor(sour, content, computeModifiers(sour, content), 3600, false)
+  if (r.events.some((e) => e.kind === 'snitch')) {
+    talkedIn++
+    heatAfterTalking = Math.max(heatAfterTalking, sour.run.heat)
+  }
+}
+console.log(`  six independent hours at zero loyalty: talked in ${talkedIn}`)
+check('a sour hire eventually talks', talkedIn >= 5, `${talkedIn}/6`)
+check('talking hurts', heatAfterTalking > 15, `heat ${heatAfterTalking.toFixed(0)}`)
+
+check('payroll adds up', (() => {
+  const s = traded(80, 0)
+  s.run.crew['chemist'] = { defId: 'crew_hattie', loyalty: 70, payLevel: 'fair' }
+  s.run.crew['accountant'] = { defId: 'crew_okonkwo', loyalty: 70, payLevel: 'fair' }
+  const total = payrollPerMinute(s, content)
+  const parts = crewWage(hattie, 'fair', s)
+    .add(crewWage(content.crew.find((c) => c.id === 'crew_okonkwo')!, 'fair', s))
+  return total.sub(parts).abs().lt(big(0.01))
+})())
+
+check('who you can reach grows with the operation', (() => {
+  const small = createInitialState(content)
+  const big1 = createInitialState(content)
+  big1.run.products['cider'].level = 1000
+  const boyle = content.crew.find((c) => c.id === 'crew_boyle')!
+  return !crewAvailable(boyle, small) && crewAvailable(boyle, big1) && totalLevels(big1) > 0
+})())
+
+// ---------------------------------------------------------------------------
+header('RIVALS')
+
+const rivalState = traded(120, 0)
+const rivalMods = computeModifiers(rivalState, content)
+const pier = content.blocks.find((b) => b.id === 'docks_pier')!
+const pierState = rivalState.run.blocks['docks_pier']
+console.log(`  ${pier.name}: value ${blockValue(pier).toFixed(2)}, defence ${blockDefense(pierState, rivalMods).toFixed(0)} from ${pierState.dealers} dealer(s)`)
+
+const undefended = traded(120, 0)
+const loneCorner = undefended.run.blocks['hts_club']
+loneCorner.unlocked = true
+runFor(undefended, content, computeModifiers(undefended, content), 1800, false)
+console.log(`  a rich corner left alone for 30 min: pressure ${loneCorner.rivalPressure.toFixed(0)}, contested=${loneCorner.contested}`)
+check('valuable corners come under pressure', loneCorner.rivalPressure > 0)
+
+// Dealers and muscle should be able to hold ground.
+const defended = traded(120, 0)
+const heldBlock = defended.run.blocks['hts_club']
+heldBlock.unlocked = true
+heldBlock.dealers = 4
+defended.run.crew['enforcer'] = { defId: 'crew_boyle', loyalty: 100, payLevel: 'fair' }
+runFor(defended, content, computeModifiers(defended, content), 1800, false)
+console.log(`  the same corner with 4 dealers and muscle: pressure ${heldBlock.rivalPressure.toFixed(0)}`)
+check('dealers and muscle hold a corner', heldBlock.rivalPressure < loneCorner.rivalPressure)
+check('a held corner is not lost', !heldBlock.contested)
+
+check('four hours away cannot cost you the map', (() => {
+  const s = traded(120, 0)
+  runFor(s, content, computeModifiers(s, content), 4 * 3600, true)
+  return content.blocks.every((b) => !s.run.blocks[b.id].contested)
+})())
+
+check('the last corner standing is never taken', (() => {
+  const s = traded(120, 0)
+  runFor(s, content, computeModifiers(s, content), 6 * 3600, false)
+  const held = content.blocks.filter((b) => {
+    const bs = s.run.blocks[b.id]
+    return bs.unlocked && !bs.contested
+  })
+  return held.length >= 1
+})(), 'no soft-lock')
+
+check('effective proof is a whole number', (() => {
+  const s = withGear(['watch_deadman'])
+  s.run.crew['chemist'] = { defId: 'crew_hattie', loyalty: 63, payLevel: 'fair' }
+  const eff = effectivePurity(50, computeModifiers(s, content))
+  return Number.isInteger(eff)
+})())
+
+check('a lost corner stops selling', (() => {
+  const s = traded(120, 0)
+  for (const b of content.blocks) {
+    const bs = s.run.blocks[b.id]
+    if (bs.unlocked) { bs.contested = true; bs.rivalPressure = 100 }
+  }
+  const r = runFor(s, content, computeModifiers(s, content), 120, false)
+  return r.revenue.lte(big(0))
+})())
+
+// ---------------------------------------------------------------------------
 header('SAVE')
 s3.run.cleanCash = big('1.2345e40')
 s3.run.products['cider'].purity = 37
@@ -425,6 +563,25 @@ check('gear and its level survive a round trip',
   back3.meta.loadout['watch_deadman']?.shards === 2)
 check('what you have on survives', back3.meta.equipped['watch'] === 'watch_deadman')
 check('unopened crates survive', back3.meta.duffels.armored === 1)
+
+s3.run.crew['lawyer'] = { defId: 'crew_marsh', loyalty: 42, payLevel: 'generous' }
+s3.run.blocks['docks_pier'].dealers = 2
+s3.run.blocks['docks_pier'].rivalPressure = 63
+s3.run.blocks['docks_pier'].contested = true
+const back4 = deserialize(serialize(s3), content)
+check('the payroll survives a round trip',
+  back4.run.crew['lawyer']?.defId === 'crew_marsh' &&
+  Math.round(back4.run.crew['lawyer']!.loyalty) === 42 &&
+  back4.run.crew['lawyer']?.payLevel === 'generous')
+check('dealers and pressure survive',
+  back4.run.blocks['docks_pier'].dealers === 2 &&
+  Math.round(back4.run.blocks['docks_pier'].rivalPressure) === 63 &&
+  back4.run.blocks['docks_pier'].contested === true)
+check('a hire in the wrong role slot is dropped', (() => {
+  const raw = JSON.parse(serialize(s3))
+  raw.run.crew['chemist'] = { defId: 'crew_marsh', loyalty: 90, payLevel: 'fair' }
+  return !deserialize(JSON.stringify(raw), content).run.crew['chemist']
+})())
 check('gear whose definition vanished is dropped, not kept', (() => {
   const raw = JSON.parse(serialize(s3))
   raw.meta.loadout['ghost_of_a_thing'] = { defId: 'ghost_of_a_thing', level: 9, shards: 0 }

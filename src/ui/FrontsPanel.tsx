@@ -1,6 +1,7 @@
 import { engine, useGame } from '../store/gameStore'
 import { big, fmtMoney, fmtDuration } from '../engine/bignum'
 import { Meter, SectionTitle } from './bits'
+import { PlacesSection } from './PlacesPanel'
 
 export function FrontsPanel() {
   const g = useGame()
@@ -120,6 +121,8 @@ export function FrontsPanel() {
           </div>
         )
       })}
+
+      <PlacesSection />
     </div>
   )
 }

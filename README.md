@@ -153,10 +153,25 @@ generating no suspicion at all below 40.
 The crate opening rolls its result before the animation begins, so the glow
 building behind the lid is already the colour of the answer.
 
+## Crew and rivals
+
+Thirteen people across five roles. Crew are deliberately not a second gear
+system: gear is slots and passive numbers, crew is **payroll and risk**.
+Everyone has a pay level, and loyalty tracks it. Under 25 they work at
+reduced effort and roll a chance each minute to talk — which costs you the
+hire and a great deal of suspicion. Wages scale with income, so a hire is
+never free.
+
+Every district is under pressure from somebody, proportional to what it is
+worth. Dealers move more product and hold the ground; muscle on the payroll
+defends every corner at once. A lost district sells nothing until bought
+back — but a corner can never be taken while you are offline, and the last
+one standing can never be taken at all.
+
 ## Status
 
-Parts 1-4 of a seven-part build. Engine, economy, save system, content
+Parts 1-5 of a seven-part build. Engine, economy, save system, content
 pipeline, dev tooling, the five minigames, the heat and laundering systems
-with their screens, the event log, and the Loadout with its crates are in.
-Still to come: crew, the territory map proper, prestige UI, and the juice
-pass.
+with their screens, the event log, the Loadout with its crates, and crew
+with territory are in. Still to come: the prestige UI and Connections tree,
+the balance pass, and the juice pass.

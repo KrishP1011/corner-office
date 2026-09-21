@@ -2,11 +2,12 @@ import { engine, useGame } from '../store/gameStore'
 import { fmtMoney } from '../engine/bignum'
 import { SectionTitle } from './bits'
 
-export function PlacesPanel() {
+export function PlacesSection() {
   const g = useGame()
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pt-4">
+      <div className="rule-brass h-px w-full opacity-40" />
       <SectionTitle hint={`${g.stationsUsed} / ${g.stationSlots} lines`}>Where you work</SectionTitle>
 
       {g.locations.map((l) => (

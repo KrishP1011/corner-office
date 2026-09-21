@@ -5,6 +5,7 @@ import {
   computeModifiers, stationCost, stationCostBulk, affordableLevels,
   canPrestige, prestigePayout, prestigeRequirement,
   buffFromScore, autoRunUnlocked, bribeCost,
+  crewAvailable, crewWage, payrollPerMinute, secondsOfIncome, totalLevels,
 } from './economy'
 import { createInitialState, applyPrestige, refreshBlockUnlocks } from './state'
 import { runFor, cappedOfflineSeconds } from './tick'
@@ -12,6 +13,7 @@ import { loadFromStorage, saveToStorage, clearStorage, exportSave, importSave } 
 import type {
   ContentPack, GameState, Modifiers, StepReport, ItemSlot,
   GameEvent, EventDraft, DuffelTier, OpenResult, Rarity, ItemDef,
+  CrewRole, PayLevel, CrewDef,
 } from './types'
 
 const RARITY_ORDER: Rarity[] = ['street', 'solid', 'connected', 'made', 'untouchable']
@@ -145,6 +147,7 @@ export class Engine {
       this.lastReport = runFor(this.state, this.content, this.mods, elapsed, false)
     }
     this.record(this.lastReport.events)
+    this.refreshCrewRoster()
 
     this.sinceSave += elapsed
     if (this.sinceSave >= BALANCE.SAVE_INTERVAL_SECONDS) {
@@ -183,6 +186,10 @@ export class Engine {
     const s = this.content.strings
     const productName = (id?: string) =>
       this.content.products.find((p) => p.id === id)?.name ?? 'a line'
+    const crewName = (id?: string) =>
+      this.content.crew.find((c) => c.id === id)?.name ?? 'Somebody'
+    const blockName = (id?: string) =>
+      this.content.blocks.find((b) => b.id === id)?.name ?? 'A corner'
 
     switch (d.kind) {
       case 'raid':
@@ -199,6 +206,16 @@ export class Engine {
         return d.value && d.value > 1
           ? `Found ${d.value} ${s.chestLabel.toLowerCase()}s tucked in the stock.`
           : `Found a ${s.chestLabel.toLowerCase()} tucked in the stock.`
+      case 'snitch':
+        return `${crewName(d.subject)} talked. Everything they knew, the ${s.lawLabel.toLowerCase()} know now.`
+      case 'unpaid':
+        return `${crewName(d.subject)} did not get paid. People remember that.`
+      case 'crewAvailable':
+        return `${crewName(d.subject)} will take your call now.`
+      case 'blockLost':
+        return `${blockName(d.subject)} is somebody else's corner now.`
+      case 'blockHeld':
+        return `${blockName(d.subject)} is yours again. It will not stay that way on its own.`
       case 'bribe':
         return `Paid off the sheriff. ${fmtMoney(d.amount ?? ZERO)} out of the loose cash.`
       default:
@@ -362,6 +379,125 @@ export class Engine {
     this.state.run.bribesThisRun += 1
 
     this.record([{ kind: 'bribe', tone: 'neutral', amount: cost }])
+    this.save()
+    this.notify()
+    return true
+  }
+
+  // -- Crew ----------------------------------------------------------------
+
+  /**
+   * People you have met. Once someone is willing to work for you they stay
+   * on the list through a prestige -- DESIGN.md section 11 keeps the roster
+   * and wipes only the loyalty.
+   */
+  private refreshCrewRoster(): void {
+    for (const def of this.content.crew) {
+      if (this.state.meta.unlockedCrew.includes(def.id)) continue
+      if (crewAvailable(def, this.state)) {
+        this.state.meta.unlockedCrew.push(def.id)
+        this.record([{ kind: 'crewAvailable', tone: 'good', subject: def.id }])
+      }
+    }
+  }
+
+  crewKnown(def: CrewDef): boolean {
+    return this.state.meta.unlockedCrew.includes(def.id) || crewAvailable(def, this.state)
+  }
+
+  hireCrew(defId: string): boolean {
+    const def = this.content.crew.find((c) => c.id === defId)
+    if (!def || !this.crewKnown(def)) return false
+    if (this.state.run.crew[def.role]) return false
+
+    const cost = big(def.hireCost)
+    if (this.state.run.cleanCash.lt(cost)) return false
+
+    this.state.run.cleanCash = this.state.run.cleanCash.sub(cost)
+    this.state.run.crew[def.role] = {
+      defId: def.id,
+      loyalty: BALANCE.CREW_START_LOYALTY,
+      payLevel: 'fair',
+    }
+
+    this.mods = computeModifiers(this.state, this.content)
+    this.save()
+    this.notify()
+    return true
+  }
+
+  /** Letting someone go is free, and safer than letting them go sour. */
+  fireCrew(role: CrewRole): boolean {
+    if (!this.state.run.crew[role]) return false
+    delete this.state.run.crew[role]
+    this.mods = computeModifiers(this.state, this.content)
+    this.save()
+    this.notify()
+    return true
+  }
+
+  setPayLevel(role: CrewRole, level: PayLevel): boolean {
+    const hired = this.state.run.crew[role]
+    if (!hired) return false
+    hired.payLevel = level
+    this.notify()
+    return true
+  }
+
+  crewWage(defId: string, payLevel: PayLevel): Big {
+    const def = this.content.crew.find((c) => c.id === defId)
+    if (!def) return ZERO
+    return crewWage(def, payLevel, this.state)
+  }
+
+  payroll(): Big {
+    return payrollPerMinute(this.state, this.content)
+  }
+
+  totalLevels(): number {
+    return totalLevels(this.state)
+  }
+
+  // -- Territory -----------------------------------------------------------
+
+  dealerCost(): Big {
+    return secondsOfIncome(this.state, BALANCE.DEALER_COST_SECONDS)
+  }
+
+  retakeCost(): Big {
+    return secondsOfIncome(this.state, BALANCE.RETAKE_COST_SECONDS)
+  }
+
+  /** Put another dealer on a corner. More throughput, and more muscle. */
+  addDealer(blockId: string): boolean {
+    const def = this.content.blocks.find((b) => b.id === blockId)
+    const bs = this.state.run.blocks[blockId]
+    if (!def || !bs || !bs.unlocked || bs.contested) return false
+    if (bs.dealers >= def.dealerSlots) return false
+
+    const cost = this.dealerCost()
+    if (this.state.run.dirtyCash.lt(cost)) return false
+
+    this.state.run.dirtyCash = this.state.run.dirtyCash.sub(cost)
+    bs.dealers += 1
+    this.save()
+    this.notify()
+    return true
+  }
+
+  /** Take a corner back. Expensive, and it does not stay taken by itself. */
+  retakeBlock(blockId: string): boolean {
+    const bs = this.state.run.blocks[blockId]
+    if (!bs || !bs.contested) return false
+
+    const cost = this.retakeCost()
+    if (this.state.run.dirtyCash.lt(cost)) return false
+
+    this.state.run.dirtyCash = this.state.run.dirtyCash.sub(cost)
+    bs.contested = false
+    // Taken back, but only just -- it is immediately under pressure again.
+    bs.rivalPressure = BALANCE.RIVAL_PRESSURE_MAX * 0.5
+    this.record([{ kind: 'blockHeld', tone: 'good', subject: blockId }])
     this.save()
     this.notify()
     return true
@@ -568,6 +704,15 @@ export class Engine {
     }
     refreshBlockUnlocks(this.state, this.content)
     this.mods = computeModifiers(this.state, this.content)
+    this.notify()
+  }
+
+  devHireAll(): void {
+    for (const def of this.content.crew) {
+      if (!this.state.meta.unlockedCrew.includes(def.id)) {
+        this.state.meta.unlockedCrew.push(def.id)
+      }
+    }
     this.notify()
   }
 

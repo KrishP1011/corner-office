@@ -2,7 +2,7 @@ import { big, type Big, ZERO } from './bignum'
 import { BALANCE, MINIGAME_REWARDS, milestoneMultiplier } from './balance'
 import type {
   ProductDef, BlockDef, ContentPack, GameState,
-  Modifiers, HeatBandInfo, StatKey, QualityBuff,
+  Modifiers, HeatBandInfo, StatKey, QualityBuff, CrewDef, PayLevel,
 } from './types'
 
 // ---------------------------------------------------------------------------
@@ -19,6 +19,8 @@ export function emptyModifiers(): Modifiers {
     offlineCapHours: BALANCE.OFFLINE_CAP_HOURS_BASE,
     duffelDropRate: 0,
     demandMult: 1,
+    defense: 0,
+    raidShield: 0,
     uniques: new Set<string>(),
   }
 }
@@ -51,6 +53,22 @@ export function computeModifiers(state: GameState, content: ContentPack): Modifi
     if (def.unique) mods.uniques.add(def.unique)
   }
 
+  // Crew contribute through the same stat keys as gear, but only while they
+  // are still on side -- someone at ten loyalty is barely working.
+  const crewById = new Map(content.crew.map((c) => [c.id, c]))
+  for (const hired of Object.values(state.run.crew)) {
+    if (!hired) continue
+    const def = crewById.get(hired.defId)
+    if (!def) continue
+
+    const effort = crewEffort(hired.loyalty)
+    for (const [key, base] of Object.entries(def.stats) as [StatKey, number][]) {
+      const value = base * effort
+      if (key === 'offlineCap') mods.offlineCapHours += value
+      else mods[key] += value
+    }
+  }
+
   // Uniques that are simply a number resolve here; the rest are applied at
   // the point in the simulation where they actually mean something.
   if (mods.uniques.has('company_car')) mods.demandMult *= 1.25
@@ -63,8 +81,77 @@ export function computeModifiers(state: GameState, content: ContentPack): Modifi
   // Heat resistance is a diminishing shield, never an off switch -- at 100%
   // resistance the entire pressure system stops existing.
   mods.heatResist = Math.min(mods.heatResist, 0.9)
+  // Same reasoning: a raid must always cost something.
+  mods.raidShield = Math.min(mods.raidShield, 0.85)
 
   return mods
+}
+
+// ---------------------------------------------------------------------------
+// Crew
+// ---------------------------------------------------------------------------
+
+/**
+ * How much of their ability someone actually brings. Full effort down to the
+ * point where they start thinking about talking, then it falls away -- an
+ * unhappy hire is a liability before they are a loss.
+ */
+export function crewEffort(loyalty: number): number {
+  if (loyalty >= BALANCE.SNITCH_THRESHOLD) return 1
+  return Math.max(0.2, loyalty / BALANCE.SNITCH_THRESHOLD)
+}
+
+/** Dirty cash per minute this hire expects, at the chosen pay level. */
+export function crewWage(def: CrewDef, payLevel: PayLevel, state: GameState): Big {
+  const rarityMult = BALANCE.CREW_WAGE_RARITY[def.rarity] ?? 1
+  const payMult = BALANCE.PAY_MULT[payLevel] ?? 1
+
+  return state.run.recentRevenuePerSec
+    .mul(big(BALANCE.CREW_WAGE_SECONDS * rarityMult * payMult))
+}
+
+/** Total payroll per minute across everyone hired. */
+export function payrollPerMinute(state: GameState, content: ContentPack): Big {
+  const crewById = new Map(content.crew.map((c) => [c.id, c]))
+  let total = ZERO
+  for (const hired of Object.values(state.run.crew)) {
+    if (!hired) continue
+    const def = crewById.get(hired.defId)
+    if (def) total = total.add(crewWage(def, hired.payLevel, state))
+  }
+  return total
+}
+
+/** Total station levels, which gates who is willing to work for you. */
+export function totalLevels(state: GameState): number {
+  let n = 0
+  for (const ps of Object.values(state.run.products)) n += ps.level
+  return n
+}
+
+export function crewAvailable(def: CrewDef, state: GameState): boolean {
+  return totalLevels(state) >= def.requiresLevels
+}
+
+// ---------------------------------------------------------------------------
+// Rivals
+// ---------------------------------------------------------------------------
+
+/** How badly somebody else wants this corner. */
+export function blockValue(block: BlockDef): number {
+  return block.volume * block.priceMod
+}
+
+/** What is holding a district: the dealers on it plus your muscle. */
+export function blockDefense(bs: { dealers: number }, mods: Modifiers): number {
+  return bs.dealers * BALANCE.DEFENSE_PER_DEALER + mods.defense
+}
+
+/** Dirty cash to put another dealer on a corner, or to take one back. */
+export function secondsOfIncome(state: GameState, seconds: number): Big {
+  const base = state.run.recentRevenuePerSec.mul(big(seconds))
+  const floor = big(BALANCE.BRIBE_MIN_COST)
+  return base.gt(floor) ? base : floor
 }
 
 // ---------------------------------------------------------------------------
@@ -80,7 +167,9 @@ export function effectivePurity(
   purity: number, mods: Modifiers, buff?: QualityBuff | null,
 ): number {
   const bonus = mods.purityFloor + (buff?.purityBonus ?? 0)
-  return Math.min(BALANCE.PURITY_MAX, purity + bonus)
+  // Rounded because proof is a whole-number scale -- crew contribute
+  // fractions of a point, which would otherwise surface as "86.3904".
+  return Math.min(BALANCE.PURITY_MAX, Math.round(purity + bonus))
 }
 
 /** Multiplier on unit count from cutting. Purity 25 yields 4x the units. */

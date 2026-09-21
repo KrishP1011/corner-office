@@ -1,7 +1,165 @@
 [
-  { "id": "crew_hattie", "name": "Hattie Voss",    "role": "chemist",    "rarity": "solid",       "stats": { "purityFloor": 6 },   "marketWage": "40",   "flavor": "Ran the county fair's preserves booth for nine years. Knows exactly what heat does to sugar." },
-  { "id": "crew_pike",   "name": "Ambrose Pike",   "role": "enforcer",   "rarity": "street",      "stats": { "heatResist": 0.04 }, "marketWage": "25",   "flavor": "Not large. Just extremely willing." },
-  { "id": "crew_deel",   "name": "Junie Deel",     "role": "mule",       "rarity": "solid",       "stats": { "yield": 0.08 },      "marketWage": "55",   "flavor": "Drives the ridge road at night with the headlamps off. Has never lost a load." },
-  { "id": "crew_marsh",  "name": "Cordell Marsh",  "role": "lawyer",     "rarity": "connected",   "stats": { "heatResist": 0.14 }, "marketWage": "400",  "flavor": "Went to school with two of the three judges. Reminds them of it constantly." },
-  { "id": "crew_okonkwo","name": "Beatrice Okonkwo","role": "accountant","rarity": "connected",   "stats": { "launderRate": 0.16 },"marketWage": "380",  "flavor": "Keeps four sets of books and can produce whichever one is asked for." }
+  {
+    "id": "crew_hattie",
+    "name": "Hattie Voss",
+    "role": "chemist",
+    "rarity": "street",
+    "stats": {
+      "purityFloor": 4
+    },
+    "requiresLevels": 0,
+    "hireCost": "1500",
+    "flavor": "Ran the county fair's preserves booth for nine years. Knows exactly what heat does to sugar."
+  },
+  {
+    "id": "crew_lowell",
+    "name": "Lowell Brace",
+    "role": "chemist",
+    "rarity": "connected",
+    "stats": {
+      "purityFloor": 12
+    },
+    "requiresLevels": 120,
+    "hireCost": "900000",
+    "flavor": "Two years of pharmacy school and a suspended licence. Reads a hydrometer like scripture."
+  },
+  {
+    "id": "crew_adeline",
+    "name": "Adeline Fisk",
+    "role": "chemist",
+    "rarity": "made",
+    "stats": {
+      "purityFloor": 22,
+      "yield": 0.08
+    },
+    "requiresLevels": 420,
+    "hireCost": "120000000",
+    "flavor": "Worked a legal distillery until the law changed. Same hands, same nose, different building."
+  },
+  {
+    "id": "crew_pike",
+    "name": "Ambrose Pike",
+    "role": "enforcer",
+    "rarity": "street",
+    "stats": {
+      "defense": 8
+    },
+    "requiresLevels": 0,
+    "hireCost": "1200",
+    "flavor": "Not large. Just extremely willing."
+  },
+  {
+    "id": "crew_mott",
+    "name": "Sallie Mott",
+    "role": "enforcer",
+    "rarity": "connected",
+    "stats": {
+      "defense": 26,
+      "heatResist": 0.05
+    },
+    "requiresLevels": 150,
+    "hireCost": "1100000",
+    "flavor": "Runs six men off the docks. None of them have ever met her husband, who does not exist."
+  },
+  {
+    "id": "crew_boyle",
+    "name": "Emmett Boyle",
+    "role": "enforcer",
+    "rarity": "untouchable",
+    "stats": {
+      "defense": 70,
+      "heatResist": 0.12
+    },
+    "requiresLevels": 900,
+    "hireCost": "7500000000",
+    "flavor": "Came back from the Argonne and found peacetime disagreeable. The whole river knows the name."
+  },
+  {
+    "id": "crew_deel",
+    "name": "Junie Deel",
+    "role": "mule",
+    "rarity": "solid",
+    "stats": {
+      "yield": 0.09
+    },
+    "requiresLevels": 30,
+    "hireCost": "28000",
+    "flavor": "Drives the ridge road at night with the headlamps off. Has never lost a load."
+  },
+  {
+    "id": "crew_tarrant",
+    "name": "Cyrus Tarrant",
+    "role": "mule",
+    "rarity": "made",
+    "stats": {
+      "yield": 0.26,
+      "defense": 10
+    },
+    "requiresLevels": 420,
+    "hireCost": "140000000",
+    "flavor": "Four trucks, eleven drivers, and a schedule he keeps entirely in his head."
+  },
+  {
+    "id": "crew_reaves",
+    "name": "Dot Reaves",
+    "role": "lawyer",
+    "rarity": "street",
+    "stats": {
+      "heatResist": 0.04,
+      "raidShield": 0.1
+    },
+    "requiresLevels": 0,
+    "hireCost": "1800",
+    "flavor": "A notary with a rubber stamp and no curiosity whatsoever."
+  },
+  {
+    "id": "crew_marsh",
+    "name": "Cordell Marsh",
+    "role": "lawyer",
+    "rarity": "connected",
+    "stats": {
+      "heatResist": 0.14,
+      "raidShield": 0.25
+    },
+    "requiresLevels": 150,
+    "hireCost": "1400000",
+    "flavor": "Went to school with two of the three judges. Reminds them of it constantly."
+  },
+  {
+    "id": "crew_whitlock",
+    "name": "Imogen Whitlock",
+    "role": "lawyer",
+    "rarity": "made",
+    "stats": {
+      "heatResist": 0.24,
+      "raidShield": 0.45
+    },
+    "requiresLevels": 450,
+    "hireCost": "160000000",
+    "flavor": "Has never lost a case because she has never let one reach a courtroom."
+  },
+  {
+    "id": "crew_okonkwo",
+    "name": "Beatrice Okonkwo",
+    "role": "accountant",
+    "rarity": "solid",
+    "stats": {
+      "launderRate": 0.12
+    },
+    "requiresLevels": 30,
+    "hireCost": "32000",
+    "flavor": "Keeps four sets of books and can produce whichever one is asked for."
+  },
+  {
+    "id": "crew_rennick",
+    "name": "Silas Rennick",
+    "role": "accountant",
+    "rarity": "made",
+    "stats": {
+      "launderRate": 0.34
+    },
+    "requiresLevels": 450,
+    "hireCost": "155000000",
+    "flavor": "Moved money for a railroad until the railroad noticed. Nothing was ever proven."
+  }
 ]

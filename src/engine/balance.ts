@@ -68,6 +68,45 @@ export const BALANCE = {
    */
   ITEM_SHARDS_PER_LEVEL: 1,
 
+  // -- Crew ----------------------------------------------------------------
+  /**
+   * Wages are a slice of income rather than a flat rate, for the same reason
+   * payoffs are: a fixed number is crushing at level 10 and free at level
+   * 300. Each hire costs roughly this many seconds of earnings per minute.
+   */
+  CREW_WAGE_SECONDS: 2,
+  CREW_WAGE_RARITY: {
+    street: 0.5, solid: 0.8, connected: 1.0, made: 1.4, untouchable: 2.0,
+  } as Record<string, number>,
+  PAY_MULT: { short: 0.6, fair: 1.0, generous: 1.6 } as Record<string, number>,
+  /** Loyalty points per minute at each pay level. */
+  PAY_LOYALTY: { short: -4, fair: 0.5, generous: 3 } as Record<string, number>,
+  CREW_START_LOYALTY: 70,
+  /** Loyalty lost per minute when payroll cannot be met at all. */
+  UNPAID_LOYALTY_PER_MIN: -12,
+  /** Below this they start weighing their options. */
+  SNITCH_THRESHOLD: 25,
+  /** Chance per minute at zero loyalty, scaling down to nil at threshold. */
+  SNITCH_CHANCE_AT_ZERO: 0.08,
+  SNITCH_HEAT: 45,
+
+  // -- Rivals --------------------------------------------------------------
+  /**
+   * Pressure per minute on a district of value 1.0, before defence.
+   *
+   * Tuned against the actual content: the richest corner is worth 2.6, so a
+   * lone dealer must not out-defend it or the whole system is inert -- which
+   * is exactly what happened at 2.2 pressure against 6 defence per dealer.
+   */
+  RIVAL_PRESSURE_PER_MIN: 3.0,
+  /** Defence supplied by each dealer working a district. */
+  DEFENSE_PER_DEALER: 3,
+  RIVAL_PRESSURE_MAX: 100,
+  /** Seconds of income to put a dealer on a corner. */
+  DEALER_COST_SECONDS: 45,
+  /** Seconds of income to take a district back. */
+  RETAKE_COST_SECONDS: 180,
+
   // -- Heat ----------------------------------------------------------------
   HEAT_MAX: 100,
   HEAT_DECAY_PER_MIN: 0.8,

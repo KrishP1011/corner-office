@@ -94,6 +94,9 @@ export function DevPanel() {
         <button className="btn px-2 py-1 text-[10px]" onClick={() => { engine.devUnlockAutoRun(); say('auto-run unlocked') }}>
           auto-run
         </button>
+        <button className="btn px-2 py-1 text-[10px]" onClick={() => { engine.devHireAll(); say('crew reachable') }}>
+          crew
+        </button>
       </Group>
 
       <Group label="Save">

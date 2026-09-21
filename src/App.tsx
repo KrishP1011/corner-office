@@ -6,18 +6,18 @@ import { TerritoryPanel } from './ui/TerritoryPanel'
 import { FrontsPanel } from './ui/FrontsPanel'
 import { LawPanel } from './ui/LawPanel'
 import { KitPanel } from './ui/KitPanel'
+import { CrewPanel } from './ui/CrewPanel'
 import { EventToast } from './ui/EventToast'
-import { PlacesPanel } from './ui/PlacesPanel'
 import { OfflineModal } from './ui/OfflineModal'
 import { DevPanel } from './dev/DevPanel'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'production', label: 'Still' },
   { id: 'territory', label: 'Routes' },
+  { id: 'crew', label: 'Crew' },
   { id: 'kit', label: 'Kit' },
   { id: 'law', label: 'Law' },
   { id: 'fronts', label: 'Wash' },
-  { id: 'places', label: 'Places' },
 ]
 
 export default function App() {
@@ -36,10 +36,10 @@ export default function App() {
       <main className="flex-1 px-3 pb-24 pt-4">
         {tab === 'production' && <ProductionPanel />}
         {tab === 'territory' && <TerritoryPanel />}
+        {tab === 'crew' && <CrewPanel />}
         {tab === 'kit' && <KitPanel />}
         {tab === 'law' && <LawPanel />}
         {tab === 'fronts' && <FrontsPanel />}
-        {tab === 'places' && <PlacesPanel />}
       </main>
 
       {/* Bottom nav: thumb reach on a phone, which is where this gets played. */}
@@ -64,6 +64,18 @@ export default function App() {
                 )}
                 {t.id === 'fronts' && g.overCap && (
                   <span className="absolute right-1/4 top-2 h-1.5 w-1.5 rounded-full bg-[var(--color-danger)]" />
+                )}
+                {t.id === 'crew' && g.crew.some((r) => r.hired?.atRisk) && (
+                  <span
+                    className="pulse-warn absolute right-1/4 top-2 h-1.5 w-1.5 rounded-full"
+                    style={{ background: 'var(--color-danger)' }}
+                  />
+                )}
+                {t.id === 'territory' && g.contestedCount > 0 && (
+                  <span
+                    className="absolute right-1/4 top-2 h-1.5 w-1.5 rounded-full"
+                    style={{ background: 'var(--color-danger)' }}
+                  />
                 )}
                 {t.id === 'kit' && (g.duffels.street + g.duffels.safe + g.duffels.armored) > 0 && (
                   <span

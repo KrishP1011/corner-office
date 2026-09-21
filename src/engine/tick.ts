@@ -4,6 +4,7 @@ import {
   yieldPerCycle, effectivePurity, unitPrice, customerCeiling,
   blockAccepts, isBadBatch, heatBand, heatFromUnits,
   dirtyCap, launderPerMinute, buffFromScore, autoRunUnlocked,
+  crewWage, blockValue, blockDefense,
 } from './economy'
 import type {
   ContentPack, GameState, Modifiers, StepReport, ProductDef,
@@ -100,6 +101,7 @@ export function step(
   // -- 2. Customers and sales ---------------------------------------------
   let heatGained = 0
   const badBatches = new Set<string>()
+  const unpaid = new Set<string>()
 
   // Nothing Personal: whichever district is carrying you does not churn.
   let protectedBlock: string | null = null
@@ -117,6 +119,46 @@ export function step(
   for (const bdef of content.blocks) {
     const bs = run.blocks[bdef.id]
     if (!bs || !bs.unlocked) continue
+
+    // -- Rivals. Somebody else always wants the good corners. --------------
+    const immune = bdef.id === protectedBlock
+    if (!immune) {
+      const pressure =
+        blockValue(bdef) * BALANCE.RIVAL_PRESSURE_PER_MIN - blockDefense(bs, mods)
+      bs.rivalPressure = Math.max(
+        0,
+        Math.min(BALANCE.RIVAL_PRESSURE_MAX, bs.rivalPressure + pressure * (dt / 60)),
+      )
+
+      if (bs.rivalPressure >= BALANCE.RIVAL_PRESSURE_MAX && !bs.contested) {
+        // Two things a corner can never be lost to.
+        //
+        // Offline: you are not there to defend it. Pressure still builds, so
+        // you come back to a crisis you can act on rather than to an empty
+        // map -- four hours away was enough to lose all twelve.
+        //
+        // The last one standing: with every district gone there are no
+        // sales, with no sales there is no loose cash, and retaking costs
+        // loose cash. That is a soft-lock, not a difficulty curve.
+        const lastStanding = countHeld(run, content) <= 1
+
+        if (offline || lastStanding) {
+          bs.rivalPressure = BALANCE.RIVAL_PRESSURE_MAX - 0.01
+        } else {
+          bs.contested = true
+          report.events.push({ kind: 'blockLost', tone: 'bad', subject: bdef.id })
+        }
+      }
+    } else if (bs.contested) {
+      // Nothing Personal does not just hold the corner, it takes it back.
+      bs.contested = false
+      bs.rivalPressure = 0
+    }
+
+    if (bs.contested) {
+      bs.customers = Math.max(0, bs.customers * (1 - BALANCE.CUSTOMER_DECAY_PER_MIN * dt / 60))
+      continue
+    }
 
     // Which of this district's wanted goods can actually be supplied.
     const live: ProductDef[] = []
@@ -196,6 +238,44 @@ export function step(
     .mul(big(1 - alpha))
     .add(instantRate.mul(big(alpha)))
 
+  // -- 2b. Payroll ---------------------------------------------------------
+  const crewById = new Map(content.crew.map((c) => [c.id, c]))
+  for (const role of Object.keys(run.crew) as (keyof typeof run.crew)[]) {
+    const hired = run.crew[role]
+    if (!hired) continue
+    const def = crewById.get(hired.defId)
+    if (!def) { delete run.crew[role]; continue }
+
+    const owed = crewWage(def, hired.payLevel, state).mul(big(dt / 60))
+
+    if (run.dirtyCash.gte(owed)) {
+      run.dirtyCash = run.dirtyCash.sub(owed)
+      hired.loyalty += (BALANCE.PAY_LOYALTY[hired.payLevel] ?? 0) * (dt / 60)
+    } else {
+      // Missing payroll outright is far worse than paying short.
+      run.dirtyCash = ZERO
+      hired.loyalty += BALANCE.UNPAID_LOYALTY_PER_MIN * (dt / 60)
+      unpaid.add(def.id)
+    }
+
+    hired.loyalty = Math.max(0, Math.min(100, hired.loyalty))
+
+    if (hired.loyalty < BALANCE.SNITCH_THRESHOLD) {
+      const severity = 1 - hired.loyalty / BALANCE.SNITCH_THRESHOLD
+      const perMin = BALANCE.SNITCH_CHANCE_AT_ZERO * severity
+      const p = 1 - Math.pow(1 - perMin, dt / 60)
+      if (Math.random() < p) {
+        delete run.crew[role]
+        run.heat = Math.min(BALANCE.HEAT_MAX, run.heat + BALANCE.SNITCH_HEAT)
+        report.events.push({ kind: 'snitch', tone: 'bad', subject: def.id })
+      }
+    }
+  }
+
+  for (const id of unpaid) {
+    report.events.push({ kind: 'unpaid', tone: 'bad', subject: id })
+  }
+
   // -- 3. Sitting on a pile is its own kind of evidence --------------------
   const cap = dirtyCap(state, content)
   if (run.dirtyCash.gt(cap)) {
@@ -268,6 +348,16 @@ export function step(
   return report
 }
 
+/** Districts still under your control. */
+function countHeld(run: GameState['run'], content: ContentPack): number {
+  let n = 0
+  for (const b of content.blocks) {
+    const bs = run.blocks[b.id]
+    if (bs?.unlocked && !bs.contested) n++
+  }
+  return n
+}
+
 function applyRaid(
   state: GameState, content: ContentPack, report: StepReport, mods: Modifiers,
 ): void {
@@ -285,13 +375,15 @@ function applyRaid(
     return
   }
 
+  const cover = 1 - mods.raidShield
+
   for (const def of content.products) {
     const ps = run.products[def.id]
     if (!ps) continue
-    ps.inventory = ps.inventory.mul(big(1 - BALANCE.RAID_INVENTORY_LOSS))
+    ps.inventory = ps.inventory.mul(big(1 - BALANCE.RAID_INVENTORY_LOSS * cover))
   }
 
-  const lost = run.dirtyCash.mul(big(BALANCE.RAID_DIRTY_LOSS))
+  const lost = run.dirtyCash.mul(big(BALANCE.RAID_DIRTY_LOSS * cover))
   run.dirtyCash = run.dirtyCash.sub(lost)
   report.raidLoss = lost
 

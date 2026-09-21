@@ -597,6 +597,55 @@ and the grind becomes optional.
    within six seconds. Capped live spores at 8 and slowed maturity. Pressure
    should build, not detonate.
 
+### Part 5 — crew and rivals
+
+Shipped: 13 crew across 5 roles with wages, pay levels, loyalty and snitch
+risk; dealer assignment; rivals contesting districts; and the Crew screen.
+Places folded into the Wash tab — both are what banked cash buys, and seven
+tabs does not fit a phone.
+
+**Crew are a liability, not a buff.** That is the whole point of section 10:
+gear is slots and passive numbers, crew is payroll and risk, so the two
+never feel like one system wearing two hats. Everyone has a pay level —
+Short, Fair, Generous — and loyalty tracks it. Under 25 they work at reduced
+effort and roll a chance each minute to talk, which costs the hire and 45
+suspicion. Missing payroll entirely is far worse than paying short.
+
+**Wages scale with income**, for exactly the reason payoffs do: a flat rate
+is crushing at level 10 and free at level 300. Each hire costs a couple of
+seconds of earnings per minute, scaled by rarity and pay level.
+
+**Rivals** put every district under pressure proportional to its value.
+Dealers both move more product and hold the ground, and muscle on the
+payroll defends every corner at once. Lose a district and it sells nothing
+until you buy it back.
+
+**13 crew, not 12.** The lawyer slot's cheapest hire sat at 150 total
+levels, which left a whole role empty for hours. Added an early one rather
+than leave a hole in the design.
+
+### Bugs found and fixed in Part 5
+
+1. **The rival system was completely inert.** A single dealer supplied 6
+   defence against a maximum of 5.72 pressure per minute across every
+   district in the content — so nothing was ever contested, anywhere. Tuned
+   against the actual numbers rather than in the abstract: pressure to 3.0
+   per unit value, defence to 3 per dealer.
+2. **Four hours offline lost all twelve districts** once rivals worked. A
+   corner can no longer be taken while you are away: pressure still builds,
+   so you return to a crisis you can act on instead of an empty map. Same
+   reasoning as the offline cap.
+3. **And that was a soft-lock.** With every district contested there are no
+   sales, with no sales no loose cash, and retaking costs loose cash — an
+   unrecoverable state reachable by closing the app overnight. The last
+   district standing can never be taken.
+4. **Effective proof rendered as "86.3904".** Crew contribute fractional
+   points where gear contributed whole ones. Proof is a whole-number scale,
+   so it rounds in the engine.
+5. **A flaky test.** The snitch check failed once and passed on re-run — a
+   one-hour trial misses by chance about once in 150. It now runs six
+   independent hours, which is the difference between a test and a coin.
+
 ### Part 4 — the Loadout
 
 Shipped: 48 items, duplicate levelling, crates with the tiered odds from

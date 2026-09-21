@@ -31,6 +31,8 @@ function freshBlocks(content: ContentPack, products: Record<string, ProductState
       unlocked: b.wants.some((w) => products[w]?.unlocked),
       customers: 0,
       dealers: 1,
+      rivalPressure: 0,
+      contested: false,
     }
   }
   return out
@@ -53,6 +55,7 @@ export function freshRun(content: ContentPack): RunState {
     bribesThisRun: 0,
     lastBand: 'cold',
     raidShieldUsed: false,
+    crew: {},
     cleanEarnedThisRun: ZERO,
     startedAt: Date.now(),
   }

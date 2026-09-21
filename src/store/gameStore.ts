@@ -5,11 +5,29 @@ import { big, ZERO, type Big } from '../engine/bignum'
 import {
   heatBand, dirtyCap, launderPerMinute, yieldPerCycle,
   customerCeiling, effectivePurity, blockAccepts, autoRunUnlocked,
-  itemStatAtLevel,
+  itemStatAtLevel, crewEffort, crewWage, blockDefense, blockValue,
 } from '../engine/economy'
 import type {
-  GameEvent, ItemDef, ItemSlot, StatKey, Rarity,
+  GameEvent, ItemDef, ItemSlot, StatKey, Rarity, CrewDef, CrewRole, PayLevel,
 } from '../engine/types'
+
+export const ROLE_ORDER: CrewRole[] = ['chemist', 'enforcer', 'mule', 'lawyer', 'accountant']
+
+export const ROLE_LABEL: Record<CrewRole, string> = {
+  chemist: 'Still hand',
+  enforcer: 'Muscle',
+  mule: 'Driver',
+  lawyer: 'Counsel',
+  accountant: 'Bookkeeper',
+}
+
+export const ROLE_WHAT: Record<CrewRole, string> = {
+  chemist: 'Raises what comes off the still.',
+  enforcer: 'Holds your corners against anyone else who wants them.',
+  mule: 'Moves more, faster.',
+  lawyer: 'Softens a raid and keeps things quiet.',
+  accountant: 'Washes more of the pile.',
+}
 
 export const SLOT_ORDER: ItemSlot[] = [
   'watch', 'chain', 'burner', 'piece', 'ride', 'briefcase', 'jacket', 'kicks',
@@ -41,6 +59,8 @@ export const STAT_LABEL: Record<StatKey, string> = {
   heatResist: 'suspicion resist',
   launderRate: 'wash rate',
   offlineCap: 'hours away',
+  defense: 'muscle',
+  raidShield: 'raid cover',
 }
 import { BALANCE, shardsForLevel } from '../engine/balance'
 import type {
@@ -98,6 +118,35 @@ export interface BlockView {
   accepting: boolean
   /** Perceived purity of the weakest thing currently sold here. */
   servedPurity: number
+  rivalPressure: number
+  contested: boolean
+  defense: number
+  /** Pressure per minute this district is under, after defence. */
+  pressurePerMin: number
+  canAddDealer: boolean
+}
+
+export interface CrewView {
+  def: CrewDef
+  known: boolean
+  hired: boolean
+  loyalty: number
+  payLevel: PayLevel
+  /** What they are costing per minute right now. */
+  wage: Big
+  hireCost: Big
+  canAfford: boolean
+  /** How much of their ability they are actually bringing, 0-1. */
+  effort: number
+  atRisk: boolean
+}
+
+export interface RoleView {
+  role: CrewRole
+  label: string
+  what: string
+  hired: CrewView | null
+  candidates: CrewView[]
 }
 
 export interface LocationView {
@@ -165,6 +214,11 @@ export interface Snapshot {
   canBribe: boolean
   bribesThisRun: number
   events: GameEvent[]
+  crew: RoleView[]
+  payroll: Big
+  dealerCost: Big
+  retakeCost: Big
+  contestedCount: number
   loadout: SlotView[]
   ownedItems: number
   totalItems: number
@@ -231,6 +285,46 @@ function buildProducts(used: number, slots: number): ProductView[] {
   })
 }
 
+function buildCrew(): RoleView[] {
+  const { state, content } = engine
+
+  const view = (def: CrewDef, hired = false): CrewView => {
+    const held = hired ? state.run.crew[def.role] : undefined
+    const payLevel: PayLevel = held?.payLevel ?? 'fair'
+    const loyalty = held?.loyalty ?? BALANCE.CREW_START_LOYALTY
+    const hireCost = big(def.hireCost)
+
+    return {
+      def,
+      known: engine.crewKnown(def),
+      hired,
+      loyalty,
+      payLevel,
+      wage: crewWage(def, payLevel, state),
+      hireCost,
+      canAfford: state.run.cleanCash.gte(hireCost),
+      effort: crewEffort(loyalty),
+      atRisk: hired && loyalty < BALANCE.SNITCH_THRESHOLD,
+    }
+  }
+
+  return ROLE_ORDER.map((role) => {
+    const held = state.run.crew[role]
+    const heldDef = held ? content.crew.find((c) => c.id === held.defId) : undefined
+
+    return {
+      role,
+      label: ROLE_LABEL[role],
+      what: ROLE_WHAT[role],
+      hired: heldDef ? view(heldDef, true) : null,
+      candidates: content.crew
+        .filter((c) => c.role === role && c.id !== held?.defId)
+        .map((c) => view(c))
+        .sort((a, b) => a.def.requiresLevels - b.def.requiresLevels),
+    }
+  })
+}
+
 function buildBlocks(): BlockView[] {
   const { state, content, mods } = engine
   const run = state.run
@@ -256,6 +350,12 @@ function buildBlocks(): BlockView[] {
       dealers: bs.dealers,
       accepting: supplied && blockAccepts(def, worst),
       servedPurity: supplied ? worst : 0,
+      rivalPressure: bs.rivalPressure,
+      contested: bs.contested,
+      defense: blockDefense(bs, mods),
+      pressurePerMin:
+        blockValue(def) * BALANCE.RIVAL_PRESSURE_PER_MIN - blockDefense(bs, mods),
+      canAddDealer: bs.unlocked && !bs.contested && bs.dealers < def.dealerSlots,
     }
   })
 }
@@ -362,6 +462,11 @@ function build(): Snapshot {
     canBribe: run.heat > 0 && run.dirtyCash.gte(bribe),
     bribesThisRun: run.bribesThisRun,
     events: engine.events.slice(0, 20),
+    crew: buildCrew(),
+    payroll: engine.payroll(),
+    dealerCost: engine.dealerCost(),
+    retakeCost: engine.retakeCost(),
+    contestedCount: content.blocks.filter((b) => run.blocks[b.id]?.contested).length,
     loadout: buildLoadout(),
     ownedItems: Object.keys(state.meta.loadout).length,
     totalItems: content.items.length,
@@ -431,7 +536,9 @@ export function useGame(): Snapshot {
 // Pure UI state -- never persisted, never touched by the simulation.
 // ---------------------------------------------------------------------------
 
-export type Tab = 'production' | 'territory' | 'kit' | 'law' | 'fronts' | 'places'
+// Places folded into the Wash tab: both are what banked cash buys, and
+// seven tabs does not fit a phone.
+export type Tab = 'production' | 'territory' | 'crew' | 'kit' | 'law' | 'fronts'
 export type BuyAmount = 1 | 10 | 100 | -1
 
 interface UiState {

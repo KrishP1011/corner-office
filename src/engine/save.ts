@@ -115,6 +115,20 @@ export function deserialize(json: string, content: ContentPack): GameState {
     : 'cold'
   state.run.raidShieldUsed = r.raidShieldUsed === true
 
+  // Crew whose definition has gone are dropped rather than trusted.
+  state.run.crew = {}
+  if (isObject(r.crew)) {
+    for (const [role, hired] of Object.entries(r.crew as Record<string, any>)) {
+      const def = content.crew.find((c) => c.id === hired?.defId)
+      if (!def || def.role !== role) continue
+      ;(state.run.crew as Record<string, unknown>)[role] = {
+        defId: def.id,
+        loyalty: clampNumber(hired.loyalty, 0, 100, BALANCE.CREW_START_LOYALTY),
+        payLevel: ['short', 'fair', 'generous'].includes(hired.payLevel) ? hired.payLevel : 'fair',
+      }
+    }
+  }
+
   state.run.ownedFronts = Array.isArray(r.ownedFronts)
     ? r.ownedFronts.filter((id: unknown) => content.fronts.some((f) => f.id === id))
     : []
@@ -150,6 +164,8 @@ export function deserialize(json: string, content: ContentPack): GameState {
     target.unlocked = saved.unlocked === true || target.unlocked
     target.customers = clampNumber(saved.customers, 0, Number.MAX_SAFE_INTEGER, 0)
     target.dealers = clampNumber(saved.dealers, 1, def.dealerSlots, 1)
+    target.rivalPressure = clampNumber(saved.rivalPressure, 0, BALANCE.RIVAL_PRESSURE_MAX, 0)
+    target.contested = saved.contested === true
   }
 
   const m = raw.meta ?? {}
