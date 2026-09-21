@@ -1,5 +1,14 @@
 # Shipping
 
+Already live on GitHub Pages:
+**https://krishp1011.github.io/corner-office/**
+
+```bash
+npm run deploy    # rebuild and republish to Pages
+```
+
+For itch.io:
+
 ```bash
 npm run package
 ```

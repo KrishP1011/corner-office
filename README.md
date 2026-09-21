@@ -10,6 +10,8 @@ transactions, which means more heat, and customers who wanted better walk
 away. Every batch, every district, every tier re-asks that question with
 different numbers.
 
+**▶ Play it: https://krishp1011.github.io/corner-office/**
+
 The first release ships as **Moonshine Run**, a Prohibition bootlegging
 theme. See [DESIGN.md](DESIGN.md) for the full design and
 [section 15](DESIGN.md#15-theme-swap) for how the theme is swapped.
@@ -34,6 +36,7 @@ Opens on http://localhost:5183.
 | `npx tsx tools/balance.ts [days]` | Simulated playthrough: milestones, curve, dead stretches |
 | `npx tsx tools/heatcheck.ts` | Checks suspicion is still a dial, not a constant |
 | `npm run package` | Build and zip for itch.io |
+| `npm run deploy` | Build and publish to GitHub Pages |
 
 **Dev panel:** press `` ` `` in a dev build. Skip time, add cash, set heat,
 unlock everything, export/import saves. It is excluded from production
@@ -213,11 +216,15 @@ hat, the case in its hand — and straightens up as you come up in the world.
 
 ## Shipping
 
+Live on GitHub Pages at
+**https://krishp1011.github.io/corner-office/** — `npm run deploy`
+rebuilds and republishes it.
+
 ```bash
 npm run package
 ```
 
-118 KB zip, four files, ready for itch.io. See [SHIPPING.md](SHIPPING.md)
+119 KB zip, four files, ready for itch.io. See [SHIPPING.md](SHIPPING.md)
 for the upload settings and what is deliberately not finished.
 
 ## Status
