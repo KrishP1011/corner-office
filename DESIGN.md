@@ -597,6 +597,52 @@ and the grind becomes optional.
    within six seconds. Capped live spores at 8 and slowed maturity. Pressure
    should build, not detonate.
 
+### Part 3 — the pressure systems made legible
+
+Heat, raids and laundering all worked after Part 1, but almost none of it
+was visible: a raid silently took a third of the stock and nothing said so.
+Part 3 is about making the pressure readable and giving the player something
+to do about it.
+
+**An event log.** The simulation now emits events -- raids, bad batches,
+band crossings, crates, payoffs -- which the Engine turns into plain
+sentences. Raids and band crossings also fire a toast, because losing a
+third of your stock while looking at another screen is the difference
+between a pressure system and an inexplicable loss. Events are session-only
+and deliberately kept out of the save schema.
+
+**Heat is attributed.** Every step records heat per product, so the Law
+screen shows exactly which line is burning you and what share each one
+carries. Without this, "suspicion is rising" is not information the player
+can act on.
+
+**Payoffs.** Section 4 called for bribes, lawyers and fronts. Lawyers are
+crew (Part 5) and fronts existed, but there was no active way to spend
+against heat at all. A payoff now takes 25 off the top for dirty cash,
+costs more the more they have on you, and gets more expensive every time
+you use it -- so it relieves pressure without being the answer to it.
+
+**The wash.** The Fronts screen shows the full pipeline: the pile, the rate,
+the ceiling, how long the pile takes to come out clean, and which fronts are
+maxed out.
+
+### Bugs found and fixed in Part 3
+
+1. **Payoffs were priced off upgrade cost** (3x the priciest next station),
+   which put them at roughly 80 minutes of income by level 80 -- unusable.
+   Station costs grow exponentially while income grows linearly, so anything
+   priced against upgrades drifts out of reach by design. Repriced against a
+   smoothed income rate: 240 seconds of current earnings.
+2. **That opened an exploit**: crash your own sales by cutting below every
+   district's tolerance, wait for the income rate to fall, buy a cheap
+   payoff, resume. Fixed by making the smoothing asymmetric and
+   time-normalised -- it tracks a rise with a 30s constant and a fall with a
+   600s one, so the basis cannot be dropped on demand. Time-normalising also
+   removed a real correctness bug: the old per-step smoothing gave different
+   results depending on how the caller chunked `dt`.
+3. **The heat breakdown showed raw tick units** ("1.2 moved" from a 100ms
+   step), which reads as nonsense. Shown as a per-minute rate now.
+
 ### Balance problems found and fixed in Part 1
 
 Four of these only surfaced by running the engine headlessly, which is the

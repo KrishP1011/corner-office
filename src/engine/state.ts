@@ -49,6 +49,9 @@ export function freshRun(content: ContentPack): RunState {
     currentLocation: firstLocation,
     ownedFronts: [],
     raidCooldownSeconds: 0,
+    recentRevenuePerSec: ZERO,
+    bribesThisRun: 0,
+    lastBand: 'cold',
     cleanEarnedThisRun: ZERO,
     startedAt: Date.now(),
   }

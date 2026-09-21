@@ -26,6 +26,7 @@ export function serialize(state: GameState): string {
       dirtyCash: bigToJSON(state.run.dirtyCash),
       cleanCash: bigToJSON(state.run.cleanCash),
       cleanEarnedThisRun: bigToJSON(state.run.cleanEarnedThisRun),
+      recentRevenuePerSec: bigToJSON(state.run.recentRevenuePerSec),
       products,
     },
     meta: {
@@ -107,6 +108,11 @@ export function deserialize(json: string, content: ContentPack): GameState {
       : state.run.ownedLocations[0]
 
   state.run.raidCooldownSeconds = clampNumber(r.raidCooldownSeconds, 0, 86400, 0)
+  state.run.bribesThisRun = clampNumber(r.bribesThisRun, 0, Number.MAX_SAFE_INTEGER, 0)
+  state.run.recentRevenuePerSec = bigFromJSON(r.recentRevenuePerSec)
+  state.run.lastBand = ['cold', 'warm', 'hot', 'burned'].includes(r.lastBand)
+    ? r.lastBand
+    : 'cold'
 
   state.run.ownedFronts = Array.isArray(r.ownedFronts)
     ? r.ownedFronts.filter((id: unknown) => content.fronts.some((f) => f.id === id))

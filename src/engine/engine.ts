@@ -1,18 +1,28 @@
-import { big, type Big, ZERO } from './bignum'
+import { big, fmtMoney, type Big, ZERO } from './bignum'
 import { BALANCE } from './balance'
 import { loadContent, DEFAULT_THEME } from './content'
 import {
   computeModifiers, stationCost, stationCostBulk, affordableLevels,
   canPrestige, prestigePayout, prestigeRequirement,
-  buffFromScore, autoRunUnlocked,
+  buffFromScore, autoRunUnlocked, bribeCost,
 } from './economy'
 import { createInitialState, applyPrestige, refreshBlockUnlocks } from './state'
 import { runFor, cappedOfflineSeconds } from './tick'
 import { loadFromStorage, saveToStorage, clearStorage, exportSave, importSave } from './save'
-import type { ContentPack, GameState, Modifiers, StepReport, ItemSlot } from './types'
+import type {
+  ContentPack, GameState, Modifiers, StepReport, ItemSlot,
+  GameEvent, EventDraft,
+} from './types'
 
 /** Any elapsed gap longer than this is treated as time away, not a hitch. */
 const OFFLINE_THRESHOLD_SECONDS = 10
+
+const BAND_NAMES: Record<string, string> = {
+  cold: 'Quiet',
+  warm: 'Noticed',
+  hot: 'Watched',
+  burned: 'Hunted',
+}
 
 export interface OfflineSummary {
   seconds: number
@@ -37,6 +47,13 @@ export class Engine {
   offlineSummary: OfflineSummary | null = null
   /** The most recent step, so the UI can show per-second rates. */
   lastReport: StepReport | null = null
+  /**
+   * Recent notable events, newest first. Session-only: they exist to make
+   * the world legible while playing, not to be persisted.
+   */
+  events: GameEvent[] = []
+
+  private nextEventId = 1
 
   private listeners = new Set<Listener>()
   private intervalHandle: ReturnType<typeof setInterval> | null = null
@@ -65,6 +82,7 @@ export class Engine {
     const granted = cappedOfflineSeconds(elapsed, this.mods)
     const report = runFor(this.state, this.content, this.mods, granted, true)
 
+    this.record(report.events)
     this.offlineSummary = {
       seconds: elapsed,
       cappedAt: this.mods.offlineCapHours * 3600,
@@ -124,6 +142,7 @@ export class Engine {
     } else {
       this.lastReport = runFor(this.state, this.content, this.mods, elapsed, false)
     }
+    this.record(this.lastReport.events)
 
     this.sinceSave += elapsed
     if (this.sinceSave >= BALANCE.SAVE_INTERVAL_SECONDS) {
@@ -136,6 +155,56 @@ export class Engine {
       this.lastUiPush = now
       this.notify()
     }
+  }
+
+  /** Turn sim drafts into displayable events. The Engine owns the wording. */
+  private record(drafts: EventDraft[]): void {
+    if (drafts.length === 0) return
+
+    for (const d of drafts) {
+      const text = this.describe(d)
+      if (!text) continue
+      this.events.unshift({
+        id: this.nextEventId++,
+        kind: d.kind,
+        tone: d.tone,
+        at: Date.now(),
+        text,
+      })
+    }
+
+    // Ring buffer. Nothing reads further back than this.
+    if (this.events.length > 60) this.events.length = 60
+  }
+
+  private describe(d: EventDraft): string | null {
+    const s = this.content.strings
+    const productName = (id?: string) =>
+      this.content.products.find((p) => p.id === id)?.name ?? 'a line'
+
+    switch (d.kind) {
+      case 'raid':
+        return `Raided. They took ${fmtMoney(d.amount ?? ZERO)} and a third of the stock.`
+      case 'badBatch':
+        return `${productName(d.subject)} is going out too weak. People are getting hurt, and it shows.`
+      case 'bandUp':
+        return `${s.lawLabel} are paying attention. ${BAND_NAMES[d.subject ?? 'warm']}.`
+      case 'bandDown':
+        return `Things have quieted down. ${BAND_NAMES[d.subject ?? 'cold']}.`
+      case 'crate':
+        return d.value && d.value > 1
+          ? `Found ${d.value} ${s.chestLabel.toLowerCase()}s tucked in the stock.`
+          : `Found a ${s.chestLabel.toLowerCase()} tucked in the stock.`
+      case 'bribe':
+        return `Paid off the sheriff. ${fmtMoney(d.amount ?? ZERO)} out of the loose cash.`
+      default:
+        return null
+    }
+  }
+
+  clearEvents(): void {
+    this.events = []
+    this.notify()
   }
 
   subscribe(fn: Listener): () => void {
@@ -274,6 +343,26 @@ export class Engine {
     return true
   }
 
+  bribeCost(): Big {
+    return bribeCost(this.state, this.content)
+  }
+
+  /** Pay off the law. Dirty cash only -- this is not a bookkeeping expense. */
+  bribe(): boolean {
+    const cost = this.bribeCost()
+    if (this.state.run.dirtyCash.lt(cost)) return false
+    if (this.state.run.heat <= 0) return false
+
+    this.state.run.dirtyCash = this.state.run.dirtyCash.sub(cost)
+    this.state.run.heat = Math.max(0, this.state.run.heat - BALANCE.BRIBE_HEAT_RELIEF)
+    this.state.run.bribesThisRun += 1
+
+    this.record([{ kind: 'bribe', tone: 'neutral', amount: cost }])
+    this.save()
+    this.notify()
+    return true
+  }
+
   equip(slot: ItemSlot, defId: string | null): boolean {
     if (defId === null) {
       delete this.state.meta.equipped[slot]
@@ -344,6 +433,7 @@ export class Engine {
     this.mods = computeModifiers(this.state, this.content)
     const report = runFor(this.state, this.content, this.mods, seconds, false)
     this.lastReport = report
+    this.record(report.events)
     this.save()
     this.notify()
     return report

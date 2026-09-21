@@ -247,6 +247,24 @@ export function launderPerMinute(
   return total.mul(big(1 + mods.launderRate))
 }
 
+/**
+ * What a payoff costs right now.
+ *
+ * Priced off the priciest upgrade available, the same way the dirty-cash cap
+ * is, so it stays a real decision at every tier instead of becoming free.
+ * Heat raises the price -- they know what they have on you -- and each payoff
+ * this run raises the next, so it cannot be the whole answer to heat.
+ */
+export function bribeCost(state: GameState, content: ContentPack): Big {
+  void content
+  const base = state.run.recentRevenuePerSec.mul(big(BALANCE.BRIBE_SECONDS_OF_INCOME))
+  const floor = big(BALANCE.BRIBE_MIN_COST)
+
+  return (base.gt(floor) ? base : floor)
+    .mul(big(1 + state.run.heat / 100))
+    .mul(big(1 + state.run.bribesThisRun * BALANCE.BRIBE_ESCALATION))
+}
+
 // ---------------------------------------------------------------------------
 // Minigames
 // ---------------------------------------------------------------------------

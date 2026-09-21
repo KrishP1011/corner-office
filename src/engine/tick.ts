@@ -19,6 +19,9 @@ function emptyReport(dt: number): StepReport {
     raided: false,
     raidLoss: ZERO,
     duffelsEarned: 0,
+    heatByProduct: {},
+    unitsByProduct: {},
+    events: [],
   }
 }
 
@@ -90,11 +93,13 @@ export function step(
     if (drops > 0) {
       state.meta.duffels.street += drops
       report.duffelsEarned += drops
+      report.events.push({ kind: 'crate', tone: 'good', value: drops })
     }
   }
 
   // -- 2. Customers and sales ---------------------------------------------
   let heatGained = 0
+  const badBatches = new Set<string>()
 
   for (const bdef of content.blocks) {
     const bs = run.blocks[bdef.id]
@@ -152,10 +157,29 @@ export function step(
       report.unitsSold = report.unitsSold.add(sold)
 
       let h = heatFromUnits(sold, pdef, locationHeatMod, mods, ps.buff)
-      if (isBadBatch(bdef, eff)) h *= BALANCE.BAD_BATCH_HEAT_MULT
+      if (isBadBatch(bdef, eff)) {
+        h *= BALANCE.BAD_BATCH_HEAT_MULT
+        badBatches.add(pdef.id)
+      }
       heatGained += h
+
+      report.heatByProduct[pdef.id] = (report.heatByProduct[pdef.id] ?? 0) + h
+      report.unitsByProduct[pdef.id] = (report.unitsByProduct[pdef.id] ?? ZERO).add(sold)
     }
   }
+
+  // Smoothed with a time-normalised half-life, so the result does not depend
+  // on how the caller happened to chunk `dt`. Asymmetric on purpose: it rises
+  // quickly but falls slowly, so a player cannot crash their own sales for a
+  // moment to make a payoff cheap and then resume.
+  const instantRate = report.revenue.div(big(dt))
+  const tau = instantRate.gt(run.recentRevenuePerSec)
+    ? BALANCE.INCOME_RISE_TAU
+    : BALANCE.INCOME_FALL_TAU
+  const alpha = 1 - Math.exp(-dt / tau)
+  run.recentRevenuePerSec = run.recentRevenuePerSec
+    .mul(big(1 - alpha))
+    .add(instantRate.mul(big(alpha)))
 
   // -- 3. Sitting on a pile is its own kind of evidence --------------------
   const cap = dirtyCap(state, content)
@@ -164,6 +188,10 @@ export function step(
     if (Number.isFinite(over)) {
       heatGained += over * BALANCE.HOARD_HEAT_PER_MIN * (dt / 60)
     }
+  }
+
+  for (const id of badBatches) {
+    report.events.push({ kind: 'badBatch', tone: 'bad', subject: id })
   }
 
   // -- 4. Laundering -------------------------------------------------------
@@ -191,6 +219,17 @@ export function step(
   run.raidCooldownSeconds = Math.max(0, run.raidCooldownSeconds - dt)
 
   const nowBand = heatBand(run.heat)
+  if (nowBand.band !== run.lastBand) {
+    const order = ['cold', 'warm', 'hot', 'burned']
+    const rising = order.indexOf(nowBand.band) > order.indexOf(run.lastBand)
+    report.events.push({
+      kind: rising ? 'bandUp' : 'bandDown',
+      tone: rising ? 'bad' : 'good',
+      subject: nowBand.band,
+    })
+    run.lastBand = nowBand.band
+  }
+
   if (nowBand.raidChancePerMin > 0 && run.raidCooldownSeconds <= 0) {
     const p = 1 - Math.pow(1 - nowBand.raidChancePerMin, dt / 60)
     if (Math.random() < p) {
@@ -222,6 +261,7 @@ function applyRaid(state: GameState, content: ContentPack, report: StepReport): 
   run.raidCooldownSeconds = BALANCE.RAID_COOLDOWN_MINUTES * 60
   state.meta.duffels.safe += 1
   report.duffelsEarned += 1
+  report.events.push({ kind: 'raid', tone: 'bad', amount: lost })
 }
 
 /**
@@ -250,6 +290,14 @@ export function runFor(
     total.heatGained += r.heatGained
     total.laundered = total.laundered.add(r.laundered)
     total.duffelsEarned += r.duffelsEarned
+    total.events.push(...r.events)
+
+    for (const [id, h] of Object.entries(r.heatByProduct)) {
+      total.heatByProduct[id] = (total.heatByProduct[id] ?? 0) + h
+    }
+    for (const [id, u] of Object.entries(r.unitsByProduct)) {
+      total.unitsByProduct[id] = (total.unitsByProduct[id] ?? ZERO).add(u)
+    }
     if (r.raided) {
       total.raided = true
       total.raidLoss = total.raidLoss.add(r.raidLoss)

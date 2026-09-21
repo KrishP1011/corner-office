@@ -6,6 +6,7 @@ import {
   heatBand, dirtyCap, launderPerMinute, yieldPerCycle,
   customerCeiling, effectivePurity, blockAccepts, autoRunUnlocked,
 } from '../engine/economy'
+import type { GameEvent } from '../engine/types'
 import { BALANCE } from '../engine/balance'
 import type {
   ThemeStrings, ProductDef, LocationDef, FrontDef, BlockDef, HeatBandInfo,
@@ -79,6 +80,16 @@ export interface FrontView {
   cost: Big
 }
 
+/** One line's contribution to the heat you are currently generating. */
+export interface HeatSource {
+  id: string
+  name: string
+  perMin: number
+  share: number
+  /** Units moved per minute, not the raw count from one 100ms tick. */
+  unitsPerMin: Big
+}
+
 export interface Snapshot {
   tick: number
   strings: ThemeStrings
@@ -90,6 +101,16 @@ export interface Snapshot {
   heat: number
   band: HeatBandInfo
   raidCooldown: number
+  /** Heat generated per minute right now, before decay. */
+  heatPerMin: number
+  heatDecayPerMin: number
+  /** Net change per minute. Negative means it is cooling off. */
+  heatNetPerMin: number
+  heatSources: HeatSource[]
+  bribeCost: Big
+  canBribe: boolean
+  bribesThisRun: number
+  events: GameEvent[]
   products: ProductView[]
   blocks: BlockView[]
   locations: LocationView[]
@@ -189,6 +210,31 @@ function build(): Snapshot {
 
   const cap = dirtyCap(state, content)
 
+  // Rates come from the last step rather than being recomputed, so what the
+  // panel shows is exactly what the simulation just did.
+  const dt = report && report.dtSeconds > 0 ? report.dtSeconds : 0
+  const heatPerMin = dt > 0 ? (report!.heatGained / dt) * 60 : 0
+  const decayPerMin = BALANCE.HEAT_DECAY_PER_MIN
+
+  const heatSources: HeatSource[] = []
+  if (dt > 0 && report) {
+    for (const def of content.products) {
+      const h = report.heatByProduct[def.id]
+      if (!h) continue
+      const perMin = (h / dt) * 60
+      heatSources.push({
+        id: def.id,
+        name: def.name,
+        perMin,
+        share: heatPerMin > 0 ? perMin / heatPerMin : 0,
+        unitsPerMin: (report.unitsByProduct[def.id] ?? ZERO).div(dt).mul(60),
+      })
+    }
+    heatSources.sort((a, b) => b.perMin - a.perMin)
+  }
+
+  const bribe = engine.bribeCost()
+
   return {
     tick: ++tickCounter,
     strings: content.strings,
@@ -200,6 +246,14 @@ function build(): Snapshot {
     heat: run.heat,
     band: heatBand(run.heat),
     raidCooldown: run.raidCooldownSeconds,
+    heatPerMin,
+    heatDecayPerMin: decayPerMin,
+    heatNetPerMin: heatPerMin - decayPerMin,
+    heatSources,
+    bribeCost: bribe,
+    canBribe: run.heat > 0 && run.dirtyCash.gte(bribe),
+    bribesThisRun: run.bribesThisRun,
+    events: engine.events.slice(0, 20),
     products: buildProducts(used, slots),
     blocks: buildBlocks(),
     locations: content.locations.map((def) => ({
@@ -255,7 +309,7 @@ export function useGame(): Snapshot {
 // Pure UI state -- never persisted, never touched by the simulation.
 // ---------------------------------------------------------------------------
 
-export type Tab = 'production' | 'territory' | 'fronts' | 'places'
+export type Tab = 'production' | 'territory' | 'law' | 'fronts' | 'places'
 export type BuyAmount = 1 | 10 | 100 | -1
 
 interface UiState {

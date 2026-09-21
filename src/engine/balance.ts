@@ -93,6 +93,22 @@ export const BALANCE = {
   BASE_LAUNDER_RATE_PER_MIN: 0.05,
   BASE_LAUNDER_CAP: 120,
 
+  // -- Bribes --------------------------------------------------------------
+  /**
+   * A payoff costs this many seconds of current income, so it stays a real
+   * expense at every tier without drifting out of reach. Priced against
+   * upgrade costs instead, it would: those grow exponentially while income
+   * grows linearly, which put it at 80 minutes of trade by level 80.
+   */
+  BRIBE_SECONDS_OF_INCOME: 240,
+  /** Seconds for the smoothed income rate to track a rise, and a fall. */
+  INCOME_RISE_TAU: 30,
+  INCOME_FALL_TAU: 600,
+  BRIBE_MIN_COST: 200,
+  BRIBE_HEAT_RELIEF: 25,
+  /** Each payoff this run raises the price of the next by this fraction. */
+  BRIBE_ESCALATION: 0.25,
+
   // -- Dirty cash hoarding -------------------------------------------------
   /** Floor on how much dirty cash can sit around before it draws attention. */
   DIRTY_CAP_BASE: 25000,
