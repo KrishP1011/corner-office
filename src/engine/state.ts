@@ -1,5 +1,6 @@
 import { big, ZERO } from './bignum'
 import { BALANCE } from './balance'
+import { headStartLocations, headStartProducts } from './connections'
 import type {
   ContentPack, GameState, RunState, MetaState,
   ProductState, BlockState,
@@ -7,17 +8,18 @@ import type {
 
 export const SCHEMA_VERSION = 1
 
-function freshProducts(content: ContentPack): Record<string, ProductState> {
+function freshProducts(content: ContentPack, openLines: number): Record<string, ProductState> {
   const out: Record<string, ProductState> = {}
   content.products.forEach((p, i) => {
+    // The first product always starts unlocked and running -- an idle game
+    // that opens on a static screen has already lost. The tree can open more.
+    const open = i <= openLines
     out[p.id] = {
-      // The first product starts unlocked and running. An idle game that
-      // opens on a static screen with nothing happening has already lost.
-      level: i === 0 ? 1 : 0,
+      level: open ? 1 : 0,
       cycleProgress: 0,
       purity: BALANCE.PURITY_DEFAULT,
       inventory: ZERO,
-      unlocked: i === 0,
+      unlocked: open,
       buff: null,
     }
   })
@@ -38,19 +40,30 @@ function freshBlocks(content: ContentPack, products: Record<string, ProductState
   return out
 }
 
-export function freshRun(content: ContentPack): RunState {
-  const products = freshProducts(content)
-  const firstLocation = content.locations[0].id
+export function freshRun(content: ContentPack, meta?: MetaState): RunState {
+  const carried = meta
+    ? { locations: headStartLocations({ meta } as GameState), lines: headStartProducts({ meta } as GameState) }
+    : { locations: 0, lines: 0 }
+
+  const products = freshProducts(content, carried.lines)
+
+  // Rooms already paid for: own the first N+1 locations, and work the best.
+  const owned = content.locations
+    .slice(0, 1 + Math.min(carried.locations, content.locations.length - 1))
+    .map((l) => l.id)
+  const firstLocation = owned[owned.length - 1]
+
   return {
     dirtyCash: ZERO,
     cleanCash: ZERO,
     heat: 0,
     products,
     blocks: freshBlocks(content, products),
-    ownedLocations: [firstLocation],
+    ownedLocations: owned,
     currentLocation: firstLocation,
     ownedFronts: [],
     raidCooldownSeconds: 0,
+    shutdownSeconds: 0,
     recentRevenuePerSec: ZERO,
     bribesThisRun: 0,
     lastBand: 'cold',
@@ -95,7 +108,7 @@ export function createInitialState(content: ContentPack): GameState {
 export function applyPrestige(state: GameState, content: ContentPack, payout: ReturnType<typeof big>): GameState {
   return {
     ...state,
-    run: freshRun(content),
+    run: freshRun(content, state.meta),
     meta: {
       ...state.meta,
       connections: state.meta.connections.add(payout),

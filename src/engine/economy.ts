@@ -1,5 +1,6 @@
 import { big, type Big, ZERO } from './bignum'
 import { BALANCE, MINIGAME_REWARDS, milestoneMultiplier } from './balance'
+import { CONNECTION_NODES } from './connections'
 import type {
   ProductDef, BlockDef, ContentPack, GameState,
   Modifiers, HeatBandInfo, StatKey, QualityBuff, CrewDef, PayLevel,
@@ -67,6 +68,18 @@ export function computeModifiers(state: GameState, content: ContentPack): Modifi
       if (key === 'offlineCap') mods.offlineCapHours += value
       else mods[key] += value
     }
+  }
+
+  // The Connections tree: the permanent half of progression.
+  for (const node of CONNECTION_NODES) {
+    if (!node.stat || !node.perLevel) continue
+    const level = state.meta.connectionsSpent[node.id] ?? 0
+    if (level <= 0) continue
+
+    const value = node.perLevel * level
+    if (node.stat === 'offlineCap') mods.offlineCapHours += value
+    else if (node.stat === 'duffelDropRate') mods.duffelDropRate += value
+    else mods[node.stat] += value
   }
 
   // Uniques that are simply a number resolve here; the rest are applied at
@@ -327,34 +340,37 @@ export function dirtyCap(state: GameState, content: ContentPack): Big {
   return cap
 }
 
-/** Clean cash per minute the owned fronts can absorb from the dirty pile. */
+/**
+ * Clean cash per minute.
+ *
+ * Expressed as a share of what the operation earns, not a rate on the
+ * standing pile -- a player who reinvests holds almost no pile, and would
+ * launder almost nothing. Fronts add their share on top; a full set moves
+ * roughly half your income. Never more than is actually on hand.
+ */
 export function launderPerMinute(
   state: GameState, content: ContentPack, mods: Modifiers,
 ): Big {
   const dirty = state.run.dirtyCash
   if (dirty.lte(ZERO)) return ZERO
 
+  let share = BALANCE.BASE_LAUNDER_SHARE
   const frontsById = new Map(content.fronts.map((f) => [f.id, f]))
-
-  // Baseline capacity everyone has, so the first front is an upgrade rather
-  // than a gate on the only currency that can buy it.
-  const byBaseRate = dirty.mul(big(BALANCE.BASE_LAUNDER_RATE_PER_MIN))
-  const baseCap = big(BALANCE.BASE_LAUNDER_CAP)
-  let total = byBaseRate.lt(baseCap) ? byBaseRate : baseCap
-
-  // Clean Hands: a tenth of the pile washes itself, with no ceiling.
-  if (mods.uniques.has('clean_hands')) {
-    total = total.add(dirty.mul(big(0.10)))
-  }
-
   for (const id of state.run.ownedFronts) {
     const f = frontsById.get(id)
-    if (!f) continue
-    const byRate = dirty.mul(big(f.ratePerMin))
-    const cap = big(f.capacity)
-    total = total.add(byRate.lt(cap) ? byRate : cap)
+    if (f) share += f.ratePerMin
   }
-  return total.mul(big(1 + mods.launderRate))
+
+  // Clean Hands washes a further tenth of everything, by itself.
+  if (mods.uniques.has('clean_hands')) share += 0.10
+
+  const byIncome = state.run.recentRevenuePerSec
+    .mul(big(60 * share * (1 + mods.launderRate)))
+  const floor = big(BALANCE.BASE_LAUNDER_FLOOR_PER_MIN)
+  const perMin = byIncome.gt(floor) ? byIncome : floor
+
+  // You cannot wash money you do not have.
+  return perMin.lt(dirty) ? perMin : dirty
 }
 
 /**

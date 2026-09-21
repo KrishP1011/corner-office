@@ -168,10 +168,35 @@ defends every corner at once. A lost district sells nothing until bought
 back — but a corner can never be taken while you are offline, and the last
 one standing can never be taken at all.
 
+## Cashing out
+
+A run ends when you Go Straight: the money goes offshore and you come back
+as somebody else. Cash, stills, rooms, fronts, corners and the payroll are
+all wiped. The kit, unopened crates, everyone you have met, and your
+Connections are not.
+
+Connections buy the book — nine permanent upgrades covering output, proof,
+quiet, laundering, time away, crate luck, and head starts on rooms and
+lines. One node is deliberately uncapped, so cashing out never stops being
+worth something.
+
+## Balancing
+
+`npx tsx tools/balance.ts [days]` runs the real engine under a player policy
+and prints when each milestone lands, the income curve, and any stretch over
+40 minutes where nothing happened. Reading constants tells you nothing about
+where the walls are; this finds them.
+
+It is also the standing argument for one rule: **any number in this game
+that is not a ratio should be treated as a bug until proven otherwise.** Five
+separate flat constants have now had to be reformulated as shares of income,
+including one that priced mid-game progression at over a thousand hours.
+
 ## Status
 
-Parts 1-5 of a seven-part build. Engine, economy, save system, content
+Parts 1-6 of a seven-part build. Engine, economy, save system, content
 pipeline, dev tooling, the five minigames, the heat and laundering systems
 with their screens, the event log, the Loadout with its crates, and crew
-with territory are in. Still to come: the prestige UI and Connections tree,
-the balance pass, and the juice pass.
+with territory, prestige with the Connections tree, and a first balance pass
+are in. Still to come: the juice pass — sound, number tweening, the
+paper-doll character, a tutorial, and the itch.io build.

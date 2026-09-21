@@ -73,9 +73,14 @@ export function step(
   // -- 1. Production -------------------------------------------------------
   const productsById = new Map(content.products.map((p) => [p.id, p]))
 
+  // A raid leaves the stills cold.
+  const shutdown = run.shutdownSeconds > 0
+  run.shutdownSeconds = Math.max(0, run.shutdownSeconds - dt)
+
   for (const def of content.products) {
     const ps = run.products[def.id]
     if (!ps || ps.level <= 0 || !ps.unlocked) continue
+    if (shutdown) continue
 
     ps.cycleProgress += dt
     const cycles = Math.floor(ps.cycleProgress / def.cycleSeconds)
@@ -316,6 +321,8 @@ export function step(
     ? BALANCE.HEAT_DECAY_PER_MIN_OFFLINE
     : BALANCE.HEAT_DECAY_PER_MIN
   if (offline && mods.uniques.has('ghost_line')) decayRate *= 2
+  // A legitimate business explains why you are always around.
+  decayRate *= 1 + run.ownedFronts.length * BALANCE.FRONT_HEAT_DECAY_BONUS
   run.heat = run.heat + heatGained - decayRate * (dt / 60)
   run.heat = Math.max(0, Math.min(BALANCE.HEAT_MAX, run.heat))
   report.heatGained = heatGained
@@ -391,6 +398,7 @@ function applyRaid(
   // running hot is a temptation rather than simply a mistake.
   run.heat = Math.max(0, run.heat - BALANCE.RAID_HEAT_RELIEF)
   run.raidCooldownSeconds = BALANCE.RAID_COOLDOWN_MINUTES * 60
+  run.shutdownSeconds = BALANCE.RAID_SHUTDOWN_SECONDS * cover
   state.meta.duffels.safe += 1
   report.duffelsEarned += 1
   report.events.push({ kind: 'raid', tone: 'bad', amount: lost })

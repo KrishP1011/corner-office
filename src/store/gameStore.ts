@@ -63,6 +63,7 @@ export const STAT_LABEL: Record<StatKey, string> = {
   raidShield: 'raid cover',
 }
 import { BALANCE, shardsForLevel } from '../engine/balance'
+import { CONNECTION_NODES, nodeLevel, type ConnectionNode } from '../engine/connections'
 import type {
   ThemeStrings, ProductDef, LocationDef, FrontDef, BlockDef, HeatBandInfo,
   QualityBuff,
@@ -193,6 +194,14 @@ export interface HeatSource {
   unitsPerMin: Big
 }
 
+export interface NodeView {
+  node: ConnectionNode
+  level: number
+  cost: number
+  maxed: boolean
+  affordable: boolean
+}
+
 export interface Snapshot {
   tick: number
   strings: ThemeStrings
@@ -219,6 +228,9 @@ export interface Snapshot {
   dealerCost: Big
   retakeCost: Big
   contestedCount: number
+  connectionNodes: NodeView[]
+  cleanEarnedThisRun: Big
+  runAgeSeconds: number
   loadout: SlotView[]
   ownedItems: number
   totalItems: number
@@ -462,6 +474,19 @@ function build(): Snapshot {
     canBribe: run.heat > 0 && run.dirtyCash.gte(bribe),
     bribesThisRun: run.bribesThisRun,
     events: engine.events.slice(0, 20),
+    connectionNodes: CONNECTION_NODES.map((node) => {
+      const level = nodeLevel(state, node.id)
+      const maxed = level >= node.maxLevel
+      return {
+        node,
+        level,
+        cost: maxed ? 0 : engine.connectionCost(node.id),
+        maxed,
+        affordable: engine.canSpendConnection(node.id),
+      }
+    }),
+    cleanEarnedThisRun: run.cleanEarnedThisRun,
+    runAgeSeconds: (Date.now() - run.startedAt) / 1000,
     crew: buildCrew(),
     payroll: engine.payroll(),
     dealerCost: engine.dealerCost(),

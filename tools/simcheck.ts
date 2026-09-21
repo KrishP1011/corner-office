@@ -8,7 +8,7 @@
  *   npx tsx tools/simcheck.ts
  */
 import { loadContent } from '../src/engine/content'
-import { createInitialState } from '../src/engine/state'
+import { createInitialState, applyPrestige } from '../src/engine/state'
 import {
   computeModifiers, cutMultiplier, priceMultiplier, stationCost,
   buffFromScore, autoRunUnlocked, customerCeiling, bribeCost, heatBand,
@@ -16,6 +16,7 @@ import {
   payrollPerMinute, blockDefense, blockValue, crewAvailable, totalLevels,
 } from '../src/engine/economy'
 import { DUFFEL_ODDS, shardsForLevel } from '../src/engine/balance'
+import { CONNECTION_NODES, nodeCost } from '../src/engine/connections'
 import type { ItemSlot, Rarity, StatKey } from '../src/engine/types'
 import { BALANCE } from '../src/engine/balance'
 import { runFor } from '../src/engine/tick'
@@ -368,14 +369,21 @@ check('equipped untouchables register their effects',
 check('Company Car widens demand', geared.demandMult > 1)
 
 // Uniques have to do something, not just read well.
-const cleanState = withGear(['case_clean'])
-cleanState.run.dirtyCash = big(1_000_000)
-const plainState = createInitialState(content)
-plainState.run.dirtyCash = big(1_000_000)
+//
+// Both states are run first: laundering is a share of income, so a state
+// that has never traded launders only the opening floor.
+const cleanState = traded(120, 0)
+for (const id of ['case_clean']) {
+  cleanState.meta.loadout[id] = { defId: id, level: 1, shards: 0 }
+  cleanState.meta.equipped['briefcase'] = id
+}
+cleanState.run.dirtyCash = big(1e9)
+const plainState = traded(120, 0)
+plainState.run.dirtyCash = big(1e9)
 const withClean = launderPerMinute(cleanState, content, computeModifiers(cleanState, content))
 const withoutClean = launderPerMinute(plainState, content, computeModifiers(plainState, content))
-console.log(`  wash rate on $1M: plain=${fmtMoney(withoutClean)}/min  Clean Hands=${fmtMoney(withClean)}/min`)
-check('Clean Hands washes more', withClean.gt(withoutClean.mul(2)))
+console.log(`  wash rate: plain=${fmtMoney(withoutClean)}/min  Clean Hands=${fmtMoney(withClean)}/min`)
+check('Clean Hands washes more', withClean.gt(withoutClean.mul(1.5)))
 
 const jacket = withGear(['jacket_nobody'])
 jacket.run.products['cider'].level = 200
@@ -533,6 +541,74 @@ check('a lost corner stops selling', (() => {
   }
   const r = runFor(s, content, computeModifiers(s, content), 120, false)
   return r.revenue.lte(big(0))
+})())
+
+// ---------------------------------------------------------------------------
+header('PRESTIGE AND THE BOOK')
+
+const treeTotal = CONNECTION_NODES
+  .filter((n) => n.maxLevel < 900)
+  .reduce((sum, n) => sum + Array.from({ length: n.maxLevel }, (_, i) => nodeCost(n, i)).reduce((a, b) => a + b, 0), 0)
+console.log(`  ${CONNECTION_NODES.length} nodes; the finite ones cost ${treeTotal} connections in total`)
+check('the book never dead-ends', CONNECTION_NODES.some((n) => n.maxLevel >= 900))
+check('every node does something',
+  CONNECTION_NODES.every((n) => (n.stat && n.perLevel) || n.id === 'rooms' || n.id === 'lines'))
+check('node costs climb', CONNECTION_NODES.every((n) => nodeCost(n, 3) > nodeCost(n, 0)))
+
+// Laundering: the bug that gated the whole game.
+const rich = traded(200, 0)
+const perMin = launderPerMinute(rich, content, computeModifiers(rich, content))
+const grossPerMin = rich.run.recentRevenuePerSec.mul(60)
+const shareOfIncome = perMin.div(grossPerMin).toNumber()
+console.log(`  earning ${fmtMoney(grossPerMin)}/min, washing ${fmtMoney(perMin)}/min (${(shareOfIncome * 100).toFixed(1)}%)`)
+check('laundering keeps pace with earnings', shareOfIncome > 0.03,
+  `${(shareOfIncome * 100).toFixed(1)}% of income`)
+check('fronts raise the share', (() => {
+  const withFronts = traded(200, 0)
+  withFronts.run.ownedFronts = content.fronts.map((f) => f.id)
+  withFronts.run.dirtyCash = big(1e12)
+  const a = launderPerMinute(withFronts, content, computeModifiers(withFronts, content))
+  const bare = traded(200, 0)
+  bare.run.dirtyCash = big(1e12)
+  const b = launderPerMinute(bare, content, computeModifiers(bare, content))
+  return a.gt(b.mul(3))
+})())
+
+// Raids must cost a reinvesting player something.
+check('a raid stops production', (() => {
+  const s = traded(120, 0)
+  s.run.heat = 99
+  s.run.dirtyCash = big(0)
+  for (let i = 0; i < 40; i++) {
+    const r = runFor(s, content, computeModifiers(s, content), 60, false)
+    if (r.raided) return s.run.shutdownSeconds > 0
+  }
+  return true
+})())
+
+// Head starts from the book.
+check('rooms already paid for carry over', (() => {
+  const s = createInitialState(content)
+  s.meta.connectionsSpent['rooms'] = 2
+  s.meta.connections = big(0)
+  const after = applyPrestige(s, content, big(0))
+  return after.run.ownedLocations.length === 3
+})())
+check('lines already running carry over', (() => {
+  const s = createInitialState(content)
+  s.meta.connectionsSpent['lines'] = 2
+  const after = applyPrestige(s, content, big(0))
+  return content.products.slice(0, 3).every((p) => after.run.products[p.id].unlocked)
+})())
+check('the kit survives cashing out', (() => {
+  const s = createInitialState(content)
+  s.meta.loadout['watch_deadman'] = { defId: 'watch_deadman', level: 5, shards: 1 }
+  s.meta.equipped['watch'] = 'watch_deadman'
+  const after = applyPrestige(s, content, big(7))
+  return after.meta.loadout['watch_deadman']?.level === 5 &&
+    after.meta.equipped['watch'] === 'watch_deadman' &&
+    after.meta.connections.eq(big(7)) &&
+    after.run.cleanCash.eq(big(0))
 })())
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { big, fmtMoney, type Big, ZERO } from './bignum'
 import { BALANCE, DUFFEL_ODDS, shardsForLevel } from './balance'
+import { CONNECTION_NODES, nodeCost, nodeLevel } from './connections'
 import { loadContent, DEFAULT_THEME } from './content'
 import {
   computeModifiers, stationCost, stationCostBulk, affordableLevels,
@@ -597,6 +598,38 @@ export class Engine {
     if (!def || def.slot !== slot || !this.state.meta.loadout[defId]) return false
     this.state.meta.equipped[slot] = defId
     this.mods = computeModifiers(this.state, this.content)
+    this.notify()
+    return true
+  }
+
+  // -- Connections ---------------------------------------------------------
+
+  connectionCost(nodeId: string): number {
+    const node = CONNECTION_NODES.find((n) => n.id === nodeId)
+    if (!node) return 0
+    const level = nodeLevel(this.state, nodeId)
+    return level >= node.maxLevel ? 0 : nodeCost(node, level)
+  }
+
+  canSpendConnection(nodeId: string): boolean {
+    const node = CONNECTION_NODES.find((n) => n.id === nodeId)
+    if (!node) return false
+    const level = nodeLevel(this.state, nodeId)
+    if (level >= node.maxLevel) return false
+    return this.state.meta.connections.gte(big(nodeCost(node, level)))
+  }
+
+  spendConnection(nodeId: string): boolean {
+    if (!this.canSpendConnection(nodeId)) return false
+    const node = CONNECTION_NODES.find((n) => n.id === nodeId)!
+    const level = nodeLevel(this.state, nodeId)
+    const cost = nodeCost(node, level)
+
+    this.state.meta.connections = this.state.meta.connections.sub(big(cost))
+    this.state.meta.connectionsSpent[nodeId] = level + 1
+
+    this.mods = computeModifiers(this.state, this.content)
+    this.save()
     this.notify()
     return true
   }

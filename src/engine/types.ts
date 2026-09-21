@@ -224,6 +224,8 @@ export interface RunState {
   ownedFronts: string[]
   /** Seconds of quiet remaining after a raid. Counts down every step. */
   raidCooldownSeconds: number
+  /** Seconds the stills stay cold after a raid. Nothing is produced. */
+  shutdownSeconds: number
   /**
    * Smoothed revenue per second. Anything priced against "what the operation
    * earns" reads this, because upgrade costs grow exponentially while income

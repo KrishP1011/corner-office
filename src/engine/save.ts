@@ -108,6 +108,7 @@ export function deserialize(json: string, content: ContentPack): GameState {
       : state.run.ownedLocations[0]
 
   state.run.raidCooldownSeconds = clampNumber(r.raidCooldownSeconds, 0, 86400, 0)
+  state.run.shutdownSeconds = clampNumber(r.shutdownSeconds, 0, 86400, 0)
   state.run.bribesThisRun = clampNumber(r.bribesThisRun, 0, Number.MAX_SAFE_INTEGER, 0)
   state.run.recentRevenuePerSec = bigFromJSON(r.recentRevenuePerSec)
   state.run.lastBand = ['cold', 'warm', 'hot', 'burned'].includes(r.lastBand)

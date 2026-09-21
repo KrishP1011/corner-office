@@ -597,6 +597,72 @@ and the grind becomes optional.
    within six seconds. Capped live spores at 8 and slowed maturity. Pressure
    should build, not detonate.
 
+### Part 6 — prestige, the book, and the balance pass
+
+Shipped: the Connections tree (9 nodes), the Get Out flow, and a real
+balance pass driven by `tools/balance.ts` — a playthrough simulator that
+runs the engine under a player policy and prints when each milestone lands.
+Reading constants tells you nothing about where the walls are.
+
+**The paper-doll art from section 17 is not in this part.** Three
+mechanical systems plus a genuine balance pass was the honest scope; the
+character art is deferred to the juice pass rather than done badly here.
+
+### The balance pass
+
+The first playthrough found a catastrophic wall: **income was flat from 5h
+to 22h** — $13.6K/s to $17.7K/s over seventeen hours, with an 11h40m stretch
+where nothing happened at all.
+
+The cause was the worst bug in the project so far. Laundering was 5% of the
+standing pile capped at **$120/min**, set in Part 1 when that was a sensible
+number. By mid-game a player earning **$377,000 per minute** could still only
+make $120 of it legitimate — so every clean-cash gate in the game was priced
+in hundreds of hours. Moonshine at $250K was 34 hours of laundering. Bathtub
+Gin was 1,111 hours.
+
+Worse, a rate on the *pile* pays almost nothing to a player who reinvests,
+which is every player.
+
+Laundering is now a **share of income**: 8% base, plus each front's share, so
+a full set moves about half of what you earn. The same playthrough now opens
+Moonshine at 46 minutes instead of a day, and the dead stretches are 1-3
+hours rather than twelve.
+
+This is the fifth time the same bug class has appeared — flat constants in a
+game spanning twelve orders of magnitude. Payoffs, crew wages, dealer costs
+and the dirty-cash cap were all fixed the same way in earlier parts. **Any
+number in this game that is not a ratio should be treated as a bug until
+proven otherwise.**
+
+### Other balance findings
+
+1. **Heat had no teeth at scale.** A raid took a share of held cash and
+   stock, both near zero for a player who reinvests, so heat 100 cost
+   almost nothing and could simply be ignored. Raids now stop production
+   for five minutes, which scales with the operation and cannot be dodged
+   by spending.
+2. **The Connections tree dead-ended.** The finite nodes cost about 1,700
+   connections in total; past that, cashing out bought nothing. Added an
+   uncapped node so connections always have somewhere to go.
+3. **Prestige requirement outran its reward.** At 12x per run against
+   payouts compounding at roughly 3x, run lengths doubled every time —
+   1h49m, 2h13m, 4h04m, 9h46m, and stalling from there. Now 4x.
+
+### Still open after this pass
+
+Being straight about what a day of balancing did not finish:
+
+- **Late runs still lengthen more than they should.** Six cash-outs land at
+  1h45m, 2h17m, 1h54m, 3h46m, 10h07m, 14h04m. The first four are healthy;
+  runs five and six are long. More uncapped tree depth or a gentler
+  requirement curve is the likely answer.
+- **Heat sits at maximum under maximally greedy play.** The simulated
+  policy always cuts to the lowest proof the market will take and eats the
+  raids. That is arguably the system working — greed has a price, and the
+  price is now real — but it means one viable strategy never sees the
+  middle of the heat dial.
+
 ### Part 5 — crew and rivals
 
 Shipped: 13 crew across 5 roles with wages, pay levels, loyalty and snitch

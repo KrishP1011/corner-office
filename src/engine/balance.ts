@@ -124,6 +124,15 @@ export const BALANCE = {
   RAID_INVENTORY_LOSS: 0.30,
   RAID_DIRTY_LOSS: 0.20,
   /**
+   * Seconds the stills stay cold afterwards.
+   *
+   * Taking a share of held cash and stock costs almost nothing to a player
+   * who reinvests everything -- which is every player -- so at scale heat
+   * had no teeth at all. Lost production scales with the operation and
+   * cannot be dodged by spending.
+   */
+  RAID_SHUTDOWN_SECONDS: 300,
+  /**
    * Minutes of quiet after a raid. Without this, a long stretch at high heat
    * rolls a fresh raid every minute and a four-hour absence returns dozens.
    * They just turned the place over; they are not coming straight back.
@@ -134,12 +143,23 @@ export const BALANCE = {
 
   // -- Laundering ----------------------------------------------------------
   /**
-   * Fronts are an upgrade, not a gate. Without a base rate the game
-   * deadlocks: clean cash needs a front, and every front costs clean cash.
-   * This is the money you wash through your own pockets.
+   * Laundering is a SHARE OF INCOME, not a rate on the standing pile.
+   *
+   * It was 5% of the pile capped at $120/min, which is the single worst bug
+   * the balance pass turned up: a player earning $377K/min could still only
+   * make $120/min of it legitimate, so every clean-cash gate in the game --
+   * every product, room and front -- was priced in hundreds of hours. Worse,
+   * a rate on the pile pays nothing to a player who reinvests, which is
+   * every player.
+   *
+   * Fronts add their own share on top. A full set moves about half of what
+   * you earn, which is what makes them worth their price.
    */
-  BASE_LAUNDER_RATE_PER_MIN: 0.05,
-  BASE_LAUNDER_CAP: 120,
+  BASE_LAUNDER_SHARE: 0.08,
+  /** Floor for the opening minutes, before any income has been recorded. */
+  BASE_LAUNDER_FLOOR_PER_MIN: 60,
+  /** Each owned front also explains your presence, and cools things down. */
+  FRONT_HEAT_DECAY_BONUS: 0.5,
 
   // -- Bribes --------------------------------------------------------------
   /**
@@ -180,7 +200,12 @@ export const BALANCE = {
 
   // -- Prestige ------------------------------------------------------------
   PRESTIGE_BASE_REQUIREMENT: 100_000_000,
-  PRESTIGE_REQUIREMENT_GROWTH: 12,
+  /**
+   * Kept near the rate at which Connections actually compound (~3x a run).
+   * At 12x the bar outran the reward and run lengths doubled every time:
+   * 1h49m, 2h13m, 4h04m, 9h46m, and stalling from there.
+   */
+  PRESTIGE_REQUIREMENT_GROWTH: 4,
   /** Connections = floor(sqrt(lifetimeCleanThisRun / DIVISOR)). */
   PRESTIGE_DIVISOR: 1_000_000,
 

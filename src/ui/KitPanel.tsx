@@ -6,6 +6,7 @@ import {
 import { BALANCE } from '../engine/balance'
 import { fmtPct } from '../engine/bignum'
 import { CrateOpen, UNIQUE_TEXT, formatStat } from './CrateOpen'
+import { LegacyCard } from './Legacy'
 import { Meter, SectionTitle } from './bits'
 import type { DuffelTier } from '../engine/types'
 
@@ -25,6 +26,8 @@ export function KitPanel() {
   return (
     <div className="space-y-3">
       <SectionTitle hint={`${g.ownedItems} of ${g.totalItems} found`}>The kit</SectionTitle>
+
+      <LegacyCard />
 
       {/* Crates ------------------------------------------------------------ */}
       <div className="panel p-4">
