@@ -42,6 +42,11 @@ export default function App() {
       <TopBar />
 
       <main className="flex-1 px-3 pb-24 pt-4">
+        {/* In the flow, not floating. Pinned to the bottom it sat on the
+            spend panel; pinned to the top it sat on the product header.
+            Here it pushes the page down for as long as it is up and covers
+            nothing at all. */}
+        <Hints />
         {tab === 'production' && <ProductionPanel />}
         {tab === 'territory' && <TerritoryPanel />}
         {tab === 'crew' && <CrewPanel />}
@@ -107,7 +112,6 @@ export default function App() {
       <EventToast />
       <OfflineModal />
       <Intro />
-      <Hints />
       {import.meta.env.DEV && <DevPanel />}
     </div>
   )

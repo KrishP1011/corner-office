@@ -7,6 +7,7 @@ import {
   canPrestige, prestigePayout, prestigeRequirement,
   buffFromScore, autoRunUnlocked, bribeCost,
   crewAvailable, crewWage, payrollPerMinute, secondsOfIncome, totalLevels,
+  customerCeiling, dirtyCap,
 } from './economy'
 import { createInitialState, applyPrestige, refreshBlockUnlocks } from './state'
 import { runFor, cappedOfflineSeconds } from './tick'
@@ -630,12 +631,25 @@ export class Engine {
       }
     }
 
-    // Somewhere to sell it, as soon as anything is actually selling.
-    const selling = this.content.blocks.some((b) => (run.blocks[b.id]?.customers ?? 0) > 1)
-    if (selling) open('territory')
+    // These gates are deliberately later than "the system exists". The first
+    // versions asked whether anything was selling, whether any clean cash had
+    // ever landed, and whether any hire was theoretically available -- all
+    // three are true on the opening tick, so a brand-new player was handed
+    // four screens before they had bought anything. The question worth
+    // asking is not "does this system exist" but "is this player's next
+    // problem in here".
+    const levels = totalLevels(this.state)
 
-    // Money to wash, once there is some to wash.
-    if (run.cleanCash.gt(ZERO) || run.dirtyCash.gt(big(400))) open('fronts')
+    // Routes matter once a corner is saturated and volume needs somewhere
+    // else to go.
+    const saturated = this.content.blocks.some((b) => {
+      const bs = run.blocks[b.id]
+      return bs?.unlocked && bs.customers >= customerCeiling(b, this.state, this.mods) * 0.85
+    })
+    if (saturated || levels >= 12) open('territory')
+
+    // Washing matters once the pile is big enough to be a problem.
+    if (run.dirtyCash.gte(dirtyCap(this.state, this.content).mul(big(0.4)))) open('fronts')
 
     // The law, once it is actually looking.
     if (run.heat >= 15) open('law')
@@ -644,8 +658,8 @@ export class Engine {
     const crates = meta.duffels.street + meta.duffels.safe + meta.duffels.armored
     if (crates > 0 || Object.keys(meta.loadout).length > 0) open('kit')
 
-    // The payroll, once somebody will take the call.
-    if (meta.unlockedCrew.length > 0) open('crew')
+    // The payroll, once there is an operation worth putting someone on.
+    if (meta.unlockedCrew.length > 0 && levels >= 25) open('crew')
   }
 
   // -- Tips ----------------------------------------------------------------

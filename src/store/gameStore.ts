@@ -426,9 +426,11 @@ function build(): Snapshot {
   const used = content.products.filter((p) => (run.products[p.id]?.level ?? 0) > 0).length
 
   const report = engine.lastReport
-  const revenuePerSec = report && report.dtSeconds > 0
-    ? report.revenue.div(report.dtSeconds)
-    : ZERO
+  // The smoothed rate, not the last tick's. A tick is either a sale or
+  // nothing, so the raw value read "$0/s" on about 39 frames out of 40 --
+  // the headline number of the whole game, flickering against a balance
+  // that was visibly going up.
+  const revenuePerSec = run.recentRevenuePerSec
 
   const cap = dirtyCap(state, content)
 

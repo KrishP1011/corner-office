@@ -70,6 +70,7 @@ export function Money({
   const shown = useSmoothed(value)
   const [spent, setSpent] = useState(false)
   const prev = useRef(value)
+  const timer = useRef(0)
 
   useEffect(() => {
     // Only a real spend, not the constant small drain of payroll and
@@ -81,10 +82,17 @@ export function Money({
     prev.current = value
     if (!meaningful) return
 
+    // The reset timer is held in a ref rather than returned as effect
+    // cleanup. Returned, it was cleared by the very next snapshot 250ms
+    // later -- before its 380ms had run -- and since that snapshot bailed
+    // out early it never scheduled a replacement. The figure went red on
+    // the first purchase of the run and stayed red for the rest of it.
+    window.clearTimeout(timer.current)
     setSpent(true)
-    const t = window.setTimeout(() => setSpent(false), 380)
-    return () => window.clearTimeout(t)
+    timer.current = window.setTimeout(() => setSpent(false), 380)
   }, [value])
+
+  useEffect(() => () => window.clearTimeout(timer.current), [])
 
   return (
     <span

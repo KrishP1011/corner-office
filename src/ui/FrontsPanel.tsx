@@ -2,6 +2,7 @@ import { engine, useGame } from '../store/gameStore'
 import { big, fmtMoney, fmtDuration } from '../engine/bignum'
 import { Meter, SectionTitle } from './bits'
 import { PlacesSection } from './PlacesPanel'
+import { BALANCE } from '../engine/balance'
 
 export function FrontsPanel() {
   const g = useGame()
@@ -82,11 +83,11 @@ export function FrontsPanel() {
       </div>
 
       {g.fronts.map((f) => {
-        // What this front is actually contributing right now, not its ceiling.
-        const byRate = g.dirty.mul(big(f.def.ratePerMin))
-        const cap = big(f.def.capacity)
-        const contributing = byRate.lt(cap) ? byRate : cap
-        const atCeiling = f.owned && byRate.gte(cap)
+        // A share of what you EARN, which is what launderPerMinute actually
+        // computes. This panel used to describe a share of the standing pile
+        // and multiply by it -- a formula the engine has not used since the
+        // share model replaced it, so every number here was fiction.
+        const contributing = g.revenuePerSec.mul(big(60 * f.def.ratePerMin))
 
         return (
           <div key={f.def.id} className="panel p-4">
@@ -95,13 +96,15 @@ export function FrontsPanel() {
                 <div className="display text-cream text-sm tracking-wide">{f.def.name}</div>
                 <p className="text-cream-dim mt-1 text-xs leading-relaxed">{f.def.tagline}</p>
                 <div className="tnum text-cream-dim mt-2 text-[11px]">
-                  {(f.def.ratePerMin * 100).toFixed(0)}% of the pile per minute, up to{' '}
-                  {fmtMoney(cap)}/min
+                  washes a further {(f.def.ratePerMin * 100).toFixed(0)}% of what you earn
+                </div>
+                <div className="tnum text-cream-dim mt-0.5 text-[11px]">
+                  and explains {fmtMoney(big(f.def.capacity).mul(big(BALANCE.DIRTY_CAP_PER_FRONT)))} more
+                  sitting in the house
                 </div>
                 {f.owned && (
-                  <div className="tnum mt-1 text-[11px]" style={{ color: atCeiling ? 'var(--color-warn)' : 'var(--color-ok)' }}>
-                    washing {fmtMoney(contributing)}/min
-                    {atCeiling && ' — at its ceiling'}
+                  <div className="tnum text-ok mt-1 text-[11px]">
+                    washing {fmtMoney(contributing)}/min at your income
                   </div>
                 )}
               </div>

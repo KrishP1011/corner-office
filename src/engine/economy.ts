@@ -1,4 +1,4 @@
-import { big, type Big, ZERO } from './bignum'
+import { big, bigMin, bigMax, type Big, ZERO } from './bignum'
 import { BALANCE, MINIGAME_REWARDS, milestoneMultiplier } from './balance'
 import { CONNECTION_NODES } from './connections'
 import type {
@@ -406,13 +406,21 @@ export function launderPerMinute(
   // Clean Hands washes a further tenth of everything, by itself.
   if (mods.uniques.has('clean_hands')) share += 0.10
 
-  const byIncome = state.run.recentRevenuePerSec
-    .mul(big(60 * share * (1 + mods.launderRate)))
-  const floor = big(BALANCE.BASE_LAUNDER_FLOOR_PER_MIN)
-  const perMin = byIncome.gt(floor) ? byIncome : floor
+  const effShare = Math.min(share * (1 + mods.launderRate), BALANCE.LAUNDER_MAX_SHARE)
+  const perMinute = state.run.recentRevenuePerSec.mul(big(60))
+  const byIncome = perMinute.mul(big(effShare))
+
+  // The floor bootstraps the opening minutes, but it is capped against income:
+  // a flat floor that outruns what you earn washes every dollar on arrival and
+  // leaves nothing to buy stills with.
+  const floor = bigMin(
+    big(BALANCE.BASE_LAUNDER_FLOOR_PER_MIN),
+    perMinute.mul(big(BALANCE.LAUNDER_FLOOR_MAX_SHARE)),
+  )
+  const perMin = bigMax(byIncome, floor)
 
   // You cannot wash money you do not have.
-  return perMin.lt(dirty) ? perMin : dirty
+  return bigMin(perMin, dirty)
 }
 
 /**

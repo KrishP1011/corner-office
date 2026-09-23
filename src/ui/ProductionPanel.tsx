@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { engine, useGame, useUi, type ProductView, type BuyAmount } from '../store/gameStore'
-import { fmt, fmtMoney, fmtInt, fmtDuration, fmtMult } from '../engine/bignum'
+import { fmt, fmtMoney, fmtInt, fmtDuration, fmtMult, big } from '../engine/bignum'
 import { cutMultiplier, priceMultiplier } from '../engine/economy'
-import { BALANCE, nextMilestone } from '../engine/balance'
+import { BALANCE, nextMilestone, milestoneMultiplier } from '../engine/balance'
 import { Meter } from './bits'
 import { MinigameModal, describeBuff } from './minigames'
 import { Still } from './art/Still'
@@ -41,6 +41,30 @@ export function ProductionPanel() {
   }
 
   const market = marketFor(g, current)
+
+  // What "Build up" actually buys, so the button can say so.
+  const levels = buyAmount === -1 ? current.maxAffordable : buyAmount
+  const cost = engine.bulkCost(current.def.id, buyAmount)
+  const buyable = levels > 0 && g.dirty.gte(cost)
+  const nextRate = levels > 0
+    ? current.unitsPerSecond
+        .div(big(current.level * milestoneMultiplier(current.level)))
+        .mul(big((current.level + levels) * milestoneMultiplier(current.level + levels)))
+    : current.unitsPerSecond
+  const crossesMilestone =
+    milestoneMultiplier(current.level + levels) > milestoneMultiplier(current.level)
+
+  // At level 41 a single level moves 21.0/s to 21.5/s, and both sides of the
+  // arrow format as "21" -- a preview that reads as "this changes nothing".
+  // When the arrow would say nothing, say the percentage instead.
+  const rateNow = fmt(current.unitsPerSecond)
+  const rateNext = fmt(nextRate)
+  const gainPct = current.unitsPerSecond.gt(big(0))
+    ? nextRate.div(current.unitsPerSecond).toNumber() - 1
+    : 0
+  const gainLabel = rateNow === rateNext
+    ? `+${(gainPct * 100).toFixed(gainPct < 0.1 ? 1 : 0)}%`
+    : `${rateNow}/s → ${rateNext}/s`
 
   return (
     <div className="space-y-3">
@@ -187,53 +211,79 @@ export function ProductionPanel() {
         </div>
       </div>
 
-      {/* Spend ---------------------------------------------------------- */}
-      <div className="panel p-4">
-        <div className="mb-2 flex gap-1">
-          {AMOUNTS.map((a) => (
-            <button
-              key={a.label}
-              onClick={() => setBuyAmount(a.value)}
-              className={`btn flex-1 py-1 text-[10px] ${buyAmount === a.value ? 'btn-brass' : 'btn-ghost'}`}
-            >
-              {a.label}
-            </button>
-          ))}
-        </div>
-
-        <button
-          className="btn btn-brass w-full py-3"
-          disabled={buyAmount === -1 ? current.maxAffordable <= 0 : !current.canAfford}
-          onClick={() => {
-            const before = current.level
-            if (!engine.upgradeStation(current.def.id, buyAmount)) return
-            const gained = engine.state.run.products[current.def.id].level - before
-            sfx.play('buy')
-            emitFloat(`${current.def.name} +${gained}`, 'brass')
-          }}
-        >
-          Build up · {fmtMoney(engine.bulkCost(current.def.id, buyAmount))}
-        </button>
-
-        {current.def.minigame !== 'none' && (
-          <div className="mt-2 flex items-center gap-2">
-            <button className="btn flex-1" onClick={() => setOpenGame(current.def)}>
-              {current.buff ? 'Work it again' : 'Work the batch'}
-            </button>
-            {current.autoUnlocked ? (
+      {/* Spend ------------------------------------------------------------
+          Sticky, because this is the button the whole game is made of. It
+          used to sit under a 350px still: on a laptop window you had to
+          scroll past the art to find the only thing there is to do, and a
+          new player reasonably concluded there was nothing to do. */}
+      <div className="sticky bottom-14 z-10 -mx-3 px-3 pt-2">
+        <div className="panel p-3 shadow-[0_-8px_24px_rgba(0,0,0,0.45)]">
+          <div className="mb-2 flex gap-1">
+            {AMOUNTS.map((a) => (
               <button
-                className={`btn px-3 ${current.autoOn ? 'btn-brass' : 'btn-ghost'}`}
-                onClick={() => engine.toggleAutoRun(current.def.id)}
+                key={a.label}
+                onClick={() => setBuyAmount(a.value)}
+                className={`btn flex-1 py-1 text-[10px] ${buyAmount === a.value ? 'btn-brass' : 'btn-ghost'}`}
               >
-                AUTO
+                {a.label}
               </button>
+            ))}
+          </div>
+
+          <button
+            className="btn btn-brass w-full py-2.5"
+            disabled={!buyable}
+            onClick={() => {
+              const before = current.level
+              if (!engine.upgradeStation(current.def.id, buyAmount)) return
+              const gained = engine.state.run.products[current.def.id].level - before
+              sfx.play('buy')
+              emitFloat(`${current.def.name} +${gained}`, 'brass')
+            }}
+          >
+            {/* The price alone never said what the money was for. */}
+            <span className="flex items-baseline justify-center gap-2">
+              <span>Build up</span>
+              <span className="tnum opacity-60">{fmtMoney(cost)}</span>
+            </span>
+          </button>
+
+          <div className="tnum mt-1.5 text-center text-[11px]">
+            {buyable ? (
+              <span className="text-ok">
+                +{levels} level{levels === 1 ? '' : 's'} · {gainLabel}
+                {crossesMilestone && <span className="text-brass-400"> · x2 milestone</span>}
+              </span>
             ) : (
-              <span className="text-cream-dim tnum shrink-0 text-[10px]">
-                {current.plays}/{BALANCE.AUTO_UNLOCK_PLAYS}
+              <span className="text-cream-dim">
+                {fmtMoney(cost.sub(g.dirty))} more loose cash
+                {/* Only worth saying when they are visibly sitting on enough
+                    money and wondering why the button is dead. */}
+                {g.clean.gte(cost) && ' — banked money cannot buy this'}
               </span>
             )}
           </div>
-        )}
+
+          {current.def.minigame !== 'none' && (
+            <div className="mt-2 flex items-center gap-2">
+              <button className="btn flex-1 py-1.5 text-[11px]" onClick={() => setOpenGame(current.def)}>
+                {current.buff ? 'Work it again' : 'Work the batch'}
+              </button>
+              {current.autoUnlocked ? (
+                <button
+                  className={`btn px-3 py-1.5 text-[11px] ${current.autoOn ? 'btn-brass' : 'btn-ghost'}`}
+                  onClick={() => engine.toggleAutoRun(current.def.id)}
+                >
+                  AUTO
+                </button>
+              ) : (
+                <span className="text-cream-dim tnum shrink-0 text-[10px]">
+                  {current.plays}/{BALANCE.AUTO_UNLOCK_PLAYS}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {locked.length > 0 && (

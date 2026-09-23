@@ -22,7 +22,20 @@ export function Still({ p, running }: { p: ProductView; running: boolean }) {
   }, [p.level])
 
   const copper = ['#8a5a2b', '#a9682f', '#c07f3a', '#d99a5b'][tier]
-  const glow = running ? 0.85 : 0.25
+
+  /**
+   * Crates of finished stock along the back wall, one per two levels.
+   *
+   * The tiers above only change the rig at 10, 50 and 200, which leaves the
+   * opening stretch -- the part every player sees and most players judge the
+   * game on -- looking identical no matter how much they spend. These give
+   * every single purchase something to show for itself.
+   */
+  const crates = Math.min(14, Math.floor(p.level / 2))
+
+  // The fire answers the throughput too, so a bigger line visibly burns harder.
+  const heatScale = 1 + Math.min(0.45, p.level / 120)
+  const glow = running ? Math.min(1, 0.85 * heatScale) : 0.25
 
   return (
     <svg viewBox="0 0 260 150" className="w-full" style={{ display: 'block' }}>
@@ -47,13 +60,30 @@ export function Still({ p, running }: { p: ProductView; running: boolean }) {
         </clipPath>
       </defs>
 
+      {/* Stacked stock, behind everything: the count is the level. */}
+      <g opacity="0.55">
+        {Array.from({ length: crates }).map((_, i) => {
+          const col = i % 7
+          const row = Math.floor(i / 7)
+          const x = 12 + col * 17
+          const y = 104 - row * 15
+          return (
+            <g key={i}>
+              <rect x={x} y={y} width="15" height="13" rx="1.5" fill="#3a2a17" />
+              <rect x={x} y={y} width="15" height="13" rx="1.5" fill="none" stroke="#5c422339" strokeWidth="1" />
+              <rect x={x} y={y + 5.5} width="15" height="2" fill="#241a0e" opacity="0.7" />
+            </g>
+          )
+        })}
+      </g>
+
       {/* Floor shadow */}
       <ellipse cx="130" cy="142" rx="104" ry="7" fill="#000" opacity="0.45" />
 
       {/* --- Firebox ------------------------------------------------------ */}
       <rect x="44" y="112" width="74" height="22" rx="3" fill="#161d29" />
       <rect x="44" y="112" width="74" height="22" rx="3" fill="none" stroke="#243247" strokeWidth="1" />
-      <ellipse cx="81" cy="120" rx="34" ry="13" fill="url(#fire)" opacity={glow} />
+      <ellipse cx="81" cy="120" rx={34 * heatScale} ry={13 * heatScale} fill="url(#fire)" opacity={glow} />
       {running && (
         <g style={{ animation: 'flame 900ms ease-in-out infinite alternate' }}>
           <path d="M66 126 q5 -13 11 -6 q3 -9 8 0 q6 -7 10 6 Z" fill="#ffb648" opacity="0.9" />

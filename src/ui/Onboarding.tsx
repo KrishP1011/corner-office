@@ -63,9 +63,14 @@ export function Intro() {
         </div>
 
         <div className="mt-5 flex gap-2">
-          <button className="btn btn-ghost flex-1" onClick={finish}>
-            {last ? '' : 'Skip'}
-          </button>
+          {/* Not rendered at all on the last beat: a `{last ? '' : 'Skip'}`
+              label left an empty gold-bordered box sitting next to the
+              finish button, which reads as a broken control. */}
+          {!last && (
+            <button className="btn btn-ghost flex-1" onClick={finish}>
+              Skip
+            </button>
+          )}
           <button
             className="btn btn-brass flex-1"
             onClick={() => (last ? finish() : setBeat(beat + 1))}
@@ -120,8 +125,11 @@ export function Hints() {
     setReadyAt(Date.now() + 45_000)
   }
 
+  // Rendered in the page flow. Floating above the nav it covered the spend
+  // panel -- every time, the very button the tip was telling you to press --
+  // and floating below the header it covered the product it was about.
   return (
-    <div className="fixed inset-x-3 bottom-[76px] z-[46] mx-auto max-w-lg">
+    <div className="mb-3">
       <div
         className="panel p-3"
         style={{ borderColor: 'var(--color-brass-600)', animation: 'rise-in 320ms cubic-bezier(0.22,1,0.36,1)' }}

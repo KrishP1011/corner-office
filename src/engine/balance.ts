@@ -156,8 +156,27 @@ export const BALANCE = {
    * you earn, which is what makes them worth their price.
    */
   BASE_LAUNDER_SHARE: 0.08,
-  /** Floor for the opening minutes, before any income has been recorded. */
+  /**
+   * Floor for the opening minutes, before any income has been recorded.
+   *
+   * Capped against income by LAUNDER_FLOOR_MAX_SHARE. A flat floor on its own
+   * is a trap: at $60/min against an opening income of ~$48/min it washed
+   * every dollar the instant it was earned, dirty cash sat at exactly $0
+   * forever, and stills, dealers and crew -- all of which are bought with
+   * dirty cash -- became permanently unbuyable about ninety seconds in.
+   */
   BASE_LAUNDER_FLOOR_PER_MIN: 60,
+  /** The floor may never claim more than this share of income. */
+  LAUNDER_FLOOR_MAX_SHARE: 0.25,
+  /**
+   * Hard ceiling on the total share of income that can be washed.
+   *
+   * Fronts stack, Clean Hands stacks on top of those, and the run-long
+   * laundering modifiers stack on top of that. Without a ceiling a fully
+   * built player washes more than they earn and lands right back in the
+   * soft-lock above, just later and with more invested in it.
+   */
+  LAUNDER_MAX_SHARE: 0.65,
   /** Each owned front also explains your presence, and cools things down. */
   FRONT_HEAT_DECAY_BONUS: 0.6,
   /**

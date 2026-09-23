@@ -667,6 +667,76 @@ Also fixed: the money figure flinched red on every drop, including the
 constant small drain of payroll and laundering, so it sat permanently red
 and the signal meant nothing. It now reacts only to a drop worth noticing.
 
+### The playtest pass — what a real player actually hits
+
+Everything before this was checked by tools whose player buys the instant
+they can afford to. Sitting down and playing the opening for real found a
+different game.
+
+1. **The game soft-locked about ninety seconds in.** `BASE_LAUNDER_FLOOR_PER_MIN`
+   was a flat $60/min against an opening income of roughly $48/min, so every
+   dollar earned was washed on arrival and loose cash sat at exactly $0
+   forever. Stills, dealers and crew are all bought with loose cash. The only
+   button on the main screen was dead for the entire rest of the run, which
+   is the real reason the game read as "nothing to do". The floor is now
+   capped at a share of income (`LAUNDER_FLOOR_MAX_SHARE`), and total
+   laundering is capped at `LAUNDER_MAX_SHARE` so a fully built player cannot
+   arrive at the same place from the other direction.
+
+   Every existing check passed throughout, because every existing check spends
+   the moment it can. `simcheck` now also runs a policy that buys **nothing**,
+   and asserts that loose cash accumulates and that most of the take stays
+   spendable. Those two fail loudly on the old code.
+
+2. **The headline income figure read `$0/s` almost always.** It was derived
+   from the last tick's revenue, and sales clear in a spike every ten seconds
+   or so -- measured live, 39 ticks in 40 earned exactly nothing. It now reads
+   the smoothed rate the engine already keeps.
+
+   Chased one step too far: the smoothed rate was also suspected of tracking
+   the spikes rather than the mean, and a windowing change was written for it.
+   The harness put old and new within 1.05x of true income at every level, so
+   the change was backed out rather than shipped. Not every suspicion is a
+   bug.
+
+3. **The money figure went red on the first purchase and stayed red.** The
+   timer that cleared the spend-flinch was returned as effect cleanup, so the
+   next snapshot 250ms later cancelled it before its 380ms had run -- and that
+   snapshot returned early without scheduling a replacement. Held in a ref now.
+
+4. **The only action in the game was below the fold.** On a 768px window the
+   buy button sat under a 350px still. The spend panel is now sticky above the
+   nav, and says what the money buys (`+3 levels · 0.25/s → 1/s`) instead of
+   only what it costs. Where a single level rounds to no visible change, it
+   shows the percentage instead.
+
+5. **Progressive disclosure was not disclosing anything.** Routes opened when
+   anything was selling, Wash when any clean cash existed, Crew when any hire
+   was theoretically available -- all true on the opening tick, so a new player
+   got four screens immediately. The gates now ask whether the player's next
+   problem is in there: a saturated corner or 12 levels, a pile at 40% of the
+   cap, 25 levels.
+
+6. **Spending showed nothing for itself.** The still only changed at levels 10,
+   50 and 200, so the whole opening stretch looked identical no matter what you
+   bought. Stock now stacks behind the rig, one crate per two levels, and the
+   fire scales with throughput.
+
+7. **The Wash screen described a formula the engine does not use.** It showed
+   fronts as a percentage "of the pile per minute, up to $X/min" and computed
+   `dirty × ratePerMin`. Laundering has been a share of *income* since Part 6,
+   and `capacity` feeds the holding cap, not throughput. Every number on that
+   panel was fiction.
+
+8. Smaller: the intro's last beat rendered an empty gold button where "Skip"
+   used to be; tips covered the spend panel at the bottom and the product
+   header at the top, and are now in the page flow where they cover nothing.
+
+**Note for next time:** the browser pane's screenshots lag the React render by
+a frame or more. Three separate "the click did nothing" dead ends here were
+stale images -- the DOM already had the new state. Read the DOM for truth and
+use screenshots for looks.
+
 ### Part 7 — the juice pass, and shipping
 
 Shipped: sound, flowing counters, floaters, the figure, first-run

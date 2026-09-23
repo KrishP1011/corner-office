@@ -117,6 +117,37 @@ check('second product is reachable inside 12h', state.run.cleanCash.gte(big(cont
 check('heat stays survivable in the first session', state.run.heat < 95,
   `heat=${state.run.heat.toFixed(1)}`)
 
+// Every check above this one spends the moment it can afford to, which is
+// exactly why they all passed while the game was soft-locked: laundering had
+// a flat floor that outran opening income, so a player who saved up for
+// anything watched every dollar wash itself before the button lit. The policy
+// that catches that is the one that buys nothing.
+{
+  const idle = createInitialState(content)
+  const mods = computeModifiers(idle, content)
+  runFor(idle, content, mods, 1800, 0.25)
+
+  check('saving up is possible -- loose cash accumulates when nothing is spent',
+    idle.run.dirtyCash.gt(big(0)),
+    `after 30m idle: loose=${fmtMoney(idle.run.dirtyCash)}, banked=${fmtMoney(idle.run.cleanCash)}`)
+
+  // Not a ratio, so state it as one: laundering must leave the majority of
+  // income where upgrades can reach it.
+  const total = idle.run.dirtyCash.add(idle.run.cleanCash)
+  const loose = total.gt(big(0)) ? idle.run.dirtyCash.div(total).toNumber() : 0
+  check('laundering leaves most of the take spendable', loose > 0.5,
+    `${(loose * 100).toFixed(0)}% of the take is still loose`)
+
+  // The smoothed rate prices wages, payoffs and dealers, and it is the
+  // headline number on screen. Sales arrive in spikes; it must report the
+  // mean, not the spike.
+  const earned = total.toNumber()
+  const claimed = idle.run.recentRevenuePerSec.toNumber() * 1800
+  const err = Math.abs(claimed - earned) / Math.max(1, earned)
+  check('the reported income rate matches what was actually earned', err < 0.25,
+    `reported ${fmtMoney(big(claimed))} over 30m vs ${fmtMoney(big(earned))} earned`)
+}
+
 // ---------------------------------------------------------------------------
 header('HEAT PRESSURE (every line watered down as far as it will still sell)')
 // 18, not lower: under 15 every district in the game refuses, so nothing
